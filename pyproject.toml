@@ -1,0 +1,27 @@
+[project]
+name = "rs2nda"
+version = "0.1.0"
+description = "ReproSchema to NDA mapping tool"
+requires-python = ">=3.8"
+dependencies = [
+    "pydantic>=2.0",
+    "pandas>=1.0.0",
+    "pyyaml>=5.1",
+    "click>=7.0",
+    "requests>=2.0.0"  # For fetching from GitHub if needed
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black>=22.0",
+    "isort>=5.0",
+    "mypy>=1.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
