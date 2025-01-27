@@ -1,30 +1,19 @@
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field
+# src/rs2nda/models.py
+from pydantic import BaseModel
+from typing import List, Dict, Optional
 
-class RSQuestion(BaseModel):
-    """ReproSchema Question Model"""
+class CDEDefinition(BaseModel):
+    ElementName: str
+    ElementDescription: str
+    Notes: Optional[str]
+    ValueRange: Optional[str]
+
+class ReproSchemaResponse(BaseModel):
     id: str
-    question: Dict[str, str]  # language -> question text
-    category: str = "Item"
-    ui: Dict[str, Any]
-    response_options: str
-    pref_label: Optional[Dict[str, str]] = Field(None, alias="prefLabel")
-    schema_version: str = Field(..., alias="schemaVersion")
+    question: str
+    response_value: str
+    response_options: Optional[List[Dict[str, str]]]
 
-class NDAQuestion(BaseModel):
-    """NDA Question Model"""
-    element_name: str
-    data_type: str
-    size: Optional[float]
-    required: str
-    element_description: str
-    value_range: str
-    notes: Optional[str]
-    aliases: Optional[str]
-
-class QuestionMapping(BaseModel):
-    """Mapping between RS and NDA questions"""
-    rs_id: str
-    nda_id: str
-    confidence: float  # Confidence score of the mapping
-    method: str  # How this mapping was determined (e.g., "id_match", "text_similarity")
+class MatchedMapping(BaseModel):
+    cde_element: str
+    repro_id: Optional[str]

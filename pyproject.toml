@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "rs2nda"
 version = "0.1.0"
@@ -8,8 +12,12 @@ dependencies = [
     "pandas>=1.0.0",
     "pyyaml>=5.1",
     "click>=7.0",
-    "requests>=2.0.0"  # For fetching from GitHub if needed
+    "requests>=2.0.0",
+    "sentence-transformers>=2.0.0"
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [project.optional-dependencies]
 dev = [
@@ -18,10 +26,6 @@ dev = [
     "isort>=5.0",
     "mypy>=1.0"
 ]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
