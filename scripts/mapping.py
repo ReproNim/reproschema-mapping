@@ -1,8 +1,6 @@
 import json
 import pandas as pd
-from rs2nda.semantic_matcher import SemanticMatcher
-from rs2nda.response_mapper import ResponseMapper
-from rs2nda.utils import extract_reproschema_responses
+from rs2nda import SemanticMatcher, ResponseMapper, extract_reproschema_responses
 
 def map_schema(cde_csv_path: str, reproschema_response_path: str, cde_template_path: str):
     # Load CDE definitions and template
@@ -20,25 +18,25 @@ def map_schema(cde_csv_path: str, reproschema_response_path: str, cde_template_p
     reproschema_responses = extract_reproschema_responses(response_data)
     print(reproschema_responses)
 
-    # In your mapping script
+    # Initialize semantic matcher and get matches
     semantic_matcher = SemanticMatcher()
-
     matched_mapping = semantic_matcher.match(
         cde_definitions=cde_definitions,
         reproschema_responses=reproschema_responses
     )
-
     print(matched_mapping)
+
     # Map responses
     response_mapper = ResponseMapper(cde_definitions)
     mapped_data = response_mapper.map_responses(reproschema_responses, matched_mapping)
 
+    # Create template row
     template_row = response_mapper.create_template_row(mapped_data, template_columns)
 
-    # You can then write this to your output file
-    # For example, using pandas:
+    # Create and save output DataFrame
     df = pd.DataFrame([template_row], columns=template_columns)
     df.to_csv("output_template.csv", index=False)
+    return df
 
 if __name__ == "__main__":
     cde_csv_path = "data/nda_cde/cde_dsm5crosspg01_definitions.csv"
