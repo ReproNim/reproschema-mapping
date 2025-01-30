@@ -1,6 +1,6 @@
 # src/__init__.py
 from .rs2nda import (
-    SemanticMatcher,
+    QuestionMatcher,
     ResponseMapper,
     extract_reproschema_responses,
     CDEDefinition,
@@ -9,7 +9,7 @@ from .rs2nda import (
 )
 
 __all__ = [
-    'SemanticMatcher',
+    'QuestionMatcher',
     'ResponseMapper',
     'extract_reproschema_responses',
     'CDEDefinition',

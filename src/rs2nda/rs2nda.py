@@ -7,13 +7,11 @@ import requests
 import json
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Set
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer, util
 from langchain_ollama import ChatOllama
-from langchain.prompts import ChatPromptTemplate
 from langchain.schema.messages import HumanMessage, SystemMessage
-from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
 # Models
@@ -93,22 +91,67 @@ def validate_url(url: str) -> bool:
     except requests.RequestException:
         return False
 
-# Core Classes
-class SemanticMatcher:
+class QuestionMatcher:
     def __init__(self, model_name="all-mpnet-base-v2"):
         self.model = SentenceTransformer(model_name)
+        self.llm = ChatOllama(model="deepseek-r1")
 
-    def match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict], threshold=0.5):
-        """Match CDE definitions to ReproSchema questions using semantic similarity."""
+    def _exact_id_match(self, reproschema_ids: List[str], cde_names: List[str]) -> Dict[str, Tuple[str, float]]:
+        """Step 1: Direct matching between reproschema IDs and ElementNames"""
+        matches = {}
+        used_repro_ids = set()
+        
+        for cde_name in cde_names:
+            if cde_name in reproschema_ids:
+                matches[cde_name] = (cde_name, 1.0)  # Perfect match score
+                used_repro_ids.add(cde_name)
+                
+        return matches, used_repro_ids
+
+    def _alias_match(self, reproschema_ids: List[str], cde_definitions: pd.DataFrame, 
+                    used_repro_ids: Set[str]) -> Tuple[Dict[str, Tuple[str, float]], Set[str]]:
+        """Step 2: Match through aliases"""
+        matches = {}
+        newly_used_ids = set()
+
+        # Only process rows with non-null Aliases
+        for _, row in cde_definitions[cde_definitions['Aliases'].notna()].iterrows():
+            if pd.isna(row['Aliases']):
+                continue
+                
+            aliases = set(alias.strip() for alias in str(row['Aliases']).split(','))
+            element_name = row['ElementName']
+            
+            # Check if any reproschema ID matches any alias
+            for repro_id in reproschema_ids:
+                if repro_id in used_repro_ids:
+                    continue
+                    
+                if repro_id in aliases:
+                    matches[element_name] = (repro_id, 1.0)  # Perfect match score
+                    newly_used_ids.add(repro_id)
+                    break
+
+        return matches, newly_used_ids
+
+    def _similarity_match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict],
+                         used_repro_ids: Set[str], threshold: float = 0.5) -> Dict[str, Tuple[str, float]]:
+        """Step 3: Semantic similarity matching for remaining items"""
+        # Filter out already matched reproschema responses
+        remaining_responses = [r for r in reproschema_responses if r["id"] not in used_repro_ids]
+        
+        if not remaining_responses:
+            return {}
+
         cde_descriptions = cde_definitions["ElementDescription"].tolist()
         cde_names = cde_definitions["ElementName"].tolist()
         
-        reproschema_questions = [r["question"] for r in reproschema_responses]
-        reproschema_ids = [r["id"] for r in reproschema_responses]
+        reproschema_questions = [r["question"] for r in remaining_responses]
+        reproschema_ids = [r["id"] for r in remaining_responses]
 
+        # Compute embeddings and similarities
         cde_embeddings = self.model.encode(cde_descriptions, convert_to_tensor=True)
         repro_embeddings = self.model.encode(reproschema_questions, convert_to_tensor=True)
-
         similarity_matrix = util.cos_sim(cde_embeddings, repro_embeddings)
         similarity_matrix = similarity_matrix.cpu().numpy()
 
@@ -119,10 +162,71 @@ class SemanticMatcher:
             
             if best_score >= threshold:
                 matches[cde_name] = (reproschema_ids[best_match_idx], float(best_score))
-            else:
-                matches[cde_name] = None
 
         return matches
+
+    async def _agent_match(self, unmatched_responses: List[Dict], cde_definitions: pd.DataFrame) -> Dict[str, Tuple[str, float]]:
+        """Step 4: Use agent to match remaining items"""
+        matches = {}
+        
+        system_prompt = """You are a data mapping expert. Analyze the question from ReproSchema and the ElementDescription 
+        from CDE to determine if they correspond to each other. Return your response as a JSON with 'matched_element' and 'confidence'."""
+        
+        for response in unmatched_responses:
+            prompt = f"""
+            ReproSchema Question: {response['question']}
+            ReproSchema ID: {response['id']}
+            
+            Available CDE Elements:
+            {cde_definitions[['ElementName', 'ElementDescription']].to_string()}
+            
+            Which ElementName best matches this question? Return as JSON: {{"matched_element": "element_name", "confidence": 0.0-1.0}}
+            """
+            
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=prompt)
+            ]
+            
+            result = await self.llm.ainvoke(messages)
+            try:
+                result_json = json.loads(result.content)
+                if result_json['confidence'] > 0.7:  # Adjust threshold as needed
+                    matches[result_json['matched_element']] = (response['id'], result_json['confidence'])
+            except json.JSONDecodeError:
+                continue
+                
+        return matches
+
+    async def match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict], threshold=0.5):
+        """Main matching function that coordinates all matching steps"""
+        reproschema_ids = [r["id"] for r in reproschema_responses]
+        cde_names = cde_definitions["ElementName"].tolist()
+        all_matches = {}
+        
+        # Step 1: Exact ID matching
+        exact_matches, used_ids = self._exact_id_match(reproschema_ids, cde_names)
+        all_matches.update(exact_matches)
+        
+        # Step 2: Alias matching
+        alias_matches, newly_used_ids = self._alias_match(reproschema_ids, cde_definitions, used_ids)
+        all_matches.update(alias_matches)
+        used_ids.update(newly_used_ids)
+        
+        # Step 3: Similarity matching
+        similarity_matches = self._similarity_match(cde_definitions, reproschema_responses, used_ids, threshold)
+        all_matches.update(similarity_matches)
+        
+        # Get remaining unmatched responses
+        matched_ids = {match[0] for match in all_matches.values() if match is not None}
+        unmatched_responses = [r for r in reproschema_responses if r["id"] not in matched_ids]
+        
+        # Step 4: Agent matching for remaining items
+        if unmatched_responses:
+            agent_matches = await self._agent_match(unmatched_responses, cde_definitions)
+            all_matches.update(agent_matches)
+        
+        return all_matches
 
 class MappingResponse(BaseModel):
     mapped_value: str = Field(description="The mapped CDE value that best matches the input response value")
