@@ -2,239 +2,413 @@
 ReproSchema to NDA (National Data Archive) converter.
 Provides functionality to map ReproSchema responses to CDE (Common Data Elements) format.
 """
-
-import requests
+import asyncio
+from functools import lru_cache
 import json
+import logging
+from pathlib import Path
+import re
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Tuple, Optional, Any, Set
-from pydantic import BaseModel
-from sentence_transformers import SentenceTransformer, util
+import requests
+import torch
 from langchain_ollama import ChatOllama
 from langchain.schema.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
+from sentence_transformers import SentenceTransformer, util
 
-# Models
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class MappingConfig:
+    """Configuration settings for mapping process"""
+    similarity_threshold: float = 0.5
+    batch_size: int = 10
+    cache_size: int = 1000
+    missing_numeric: str = "-9"
+    llm_model: str = "deepseek-r1"
+
+config = MappingConfig()
+
+# Custom Exceptions
+class MappingError(Exception):
+    """Base exception for mapping errors"""
+    pass
+
+class DataValidationError(MappingError):
+    """Exception for data validation errors"""
+    pass
+
+# Pydantic Models
 class CDEDefinition(BaseModel):
+    """Model for CDE definition data"""
     ElementName: str
+    DataType: str
     ElementDescription: str
-    Notes: Optional[str]
-    ValueRange: Optional[str]
+    Notes: Optional[str] = None
+    ValueRange: Optional[str] = None
+    Aliases: Optional[str] = None
 
 class ReproSchemaResponse(BaseModel):
+    """Model for ReproSchema response data"""
     id: str
     question: str
-    response_value: str
-    response_options: Optional[List[Dict[str, str]]]
+    response_value: Any
+    isAbout: str = ""  # Add this field
+    response_options: Optional[List[Dict[str, Any]]] = None
 
-class MatchedMapping(BaseModel):
+class CDEMapping(BaseModel):
+    """Model for CDE mapping data"""
+    numeric_to_string: Dict[str, str] = Field(default_factory=dict)
+    string_to_numeric: Dict[str, str] = Field(default_factory=dict)
+    valid_values: Set[str] = Field(default_factory=set)
+    value_range: Optional[str] = None
+    min_value: Optional[int] = None
+    max_value: Optional[int] = None
+
+    def is_valid_value(self, value: str) -> bool:
+        # Special case for numeric ranges
+        if self.min_value is not None and self.max_value is not None:
+            try:
+                val = int(float(value))
+                return self.min_value <= val <= self.max_value
+            except (ValueError, TypeError):
+                pass
+        return value in self.valid_values
+
+class MappingResult(BaseModel):
+    """Model for mapping result data"""
     cde_element: str
-    repro_id: Optional[str]
+    repro_id: str
+    confidence: float
 
-# Utilities
-_cache = {}
+# Utility Classes
+class URLCache:
+    """Cache for URL content"""
+    def __init__(self, max_size: int = config.cache_size):
+        self._cache: Dict[str, Any] = {}
+        self.max_size = max_size
 
-def fetch_item_content(url: str) -> Dict:
-    """Fetch JSON content from a URL and cache it."""
-    if url not in _cache:
-        response = requests.get(url)
-        response.raise_for_status()
-        _cache[url] = response.json()
-    return _cache[url]
+    @lru_cache(maxsize=1000)
+    def fetch_item_content(self, url: str) -> Dict:
+        """Fetch and cache content from URL"""
+        try:
+            if url not in self._cache:
+                response = requests.get(url)
+                response.raise_for_status()
+                self._cache[url] = response.json()
+                
+                # Clean cache if exceeds max size
+                if len(self._cache) > self.max_size:
+                    self._cache.pop(next(iter(self._cache)))
+                    
+            return self._cache[url]
+        except Exception as e:
+            logger.error(f"Error fetching URL {url}: {str(e)}")
+            raise
+
+url_cache = URLCache()
 
 def get_constraints_url(is_about_url: str, response_options: Optional[str]) -> Optional[str]:
-    """Construct the full URL for response options (constraints) based on the isAbout URL."""
+    """Construct constraints URL from isAbout URL"""
     if not response_options or not isinstance(response_options, str):
         return None
     
-    url_parts = is_about_url.split("/")
-    if "items" not in url_parts:
+    try:
+        url_parts = is_about_url.split("/")
+        if "items" not in url_parts:
+            return None
+        
+        items_index = url_parts.index("items")
+        base_parts = url_parts[:items_index]
+        
+        if response_options.startswith("../"):
+            response_options = response_options[3:]
+        
+        return "/".join(base_parts + [response_options])
+    except Exception as e:
+        logger.error(f"Error constructing constraints URL: {str(e)}")
         return None
-    
-    items_index = url_parts.index("items")
-    base_parts = url_parts[:items_index]
-    
-    if response_options.startswith("../"):
-        response_options = response_options[3:]
-    
-    return "/".join(base_parts + [response_options])
 
 def extract_reproschema_responses(response_jsonld: List[Dict]) -> List[Dict]:
-    """Extract ReproSchema responses with question details and constraints."""
+    """Extract responses from ReproSchema JSON-LD"""
+    logger = logging.getLogger(__name__)
     responses = []
     for entry in response_jsonld:
-        if entry.get("@type") == "reproschema:Response":
-            item_url = entry["isAbout"]
-            item_content = fetch_item_content(item_url)
-            response_options = item_content.get("responseOptions")
-            options_url = get_constraints_url(item_url, response_options)
-            options_content = fetch_item_content(options_url) if options_url else None
+        try:
+            if entry.get("@type") == "reproschema:Response":
+                logger.debug(f"Processing response entry: {json.dumps(entry, indent=2)}")
+                
+                # Get the response ID
+                response_id = entry.get("@id", "")
+                
+                # Get the isAbout URL
+                is_about = entry.get("isAbout", "")
+                logger.info(f"Found isAbout URL: {is_about}")
+                
+                # Construct response
+                response = ReproSchemaResponse(
+                    id=response_id,
+                    question="",  # We'll get this from item_content later if needed
+                    response_value=entry.get("value"),
+                    response_options=None,  # We'll get this from options_content later if needed
+                    isAbout=is_about  # Add the isAbout field to track the URL
+                )
+                
+                responses.append(response.dict())
+                logger.debug(f"Added response: {json.dumps(response.dict(), indent=2)}")
+        except Exception as e:
+            logger.error(f"Error extracting response: {str(e)}")
+            continue
             
-            choices = options_content.get("choices") if options_content else None
-            responses.append({
-                'id': item_content["id"],
-                'question': item_content["question"]["en"],
-                'response_value': entry["value"],
-                'response_options': choices
-            })
     return responses
 
 def clean_string(text: str) -> str:
-    """Clean and normalize a string."""
+    """Clean and normalize text string"""
     return " ".join(text.split()).strip().lower()
 
-def validate_url(url: str) -> bool:
-    """Check if a URL is valid."""
-    try:
-        response = requests.head(url)
-        return response.status_code == 200
-    except requests.RequestException:
-        return False
-
+# Question Matching
 class QuestionMatcher:
-    def __init__(self, model_name="all-mpnet-base-v2"):
-        self.model = SentenceTransformer(model_name)
-        self.llm = ChatOllama(model="deepseek-r1")
+    """Matches ReproSchema questions to CDE elements using multiple strategies"""
 
-    def _exact_id_match(self, reproschema_ids: List[str], cde_names: List[str]) -> Dict[str, Tuple[str, float]]:
-        """Step 1: Direct matching between reproschema IDs and ElementNames"""
+    _model = None
+    
+    def __init__(self, model_name: str = "all-mpnet-base-v2"):
+        self.logger = logging.getLogger(__name__)
+        if QuestionMatcher._model is None:
+            self.logger.info("Initializing SentenceTransformer model")
+            QuestionMatcher._model = SentenceTransformer(model_name)
+        self.model = QuestionMatcher._model
+        self.llm = ChatOllama(model=config.llm_model)
+        self._embedding_cache: Dict[str, torch.Tensor] = {}
+        
+    def _get_embedding(self, text: str) -> torch.Tensor:
+        """Get cached embedding or compute new one"""
+        if text not in self._embedding_cache:
+            self._embedding_cache[text] = self.model.encode(text, convert_to_tensor=True)
+        return self._embedding_cache[text]
+
+    def _exact_id_match(self, reproschema_ids: List[str], cde_names: List[str]) -> Tuple[Dict[str, Tuple[str, float]], Set[str]]:
+        """Find exact matches between ReproSchema IDs and CDE names"""
         matches = {}
         used_repro_ids = set()
         
-        for cde_name in cde_names:
-            if cde_name in reproschema_ids:
-                matches[cde_name] = (cde_name, 1.0)  # Perfect match score
-                used_repro_ids.add(cde_name)
-                
-        return matches, used_repro_ids
+        try:
+            for cde_name in cde_names:
+                if cde_name in reproschema_ids:
+                    matches[cde_name] = (cde_name, 1.0)  # Perfect match
+                    used_repro_ids.add(cde_name)
+                    
+            return matches, used_repro_ids
+            
+        except Exception as e:
+            logger.error(f"Error in exact ID matching: {str(e)}")
+            return {}, set()
 
     def _alias_match(self, reproschema_ids: List[str], cde_definitions: pd.DataFrame, 
                     used_repro_ids: Set[str]) -> Tuple[Dict[str, Tuple[str, float]], Set[str]]:
-        """Step 2: Match through aliases"""
+        """Find matches through aliases"""
         matches = {}
         newly_used_ids = set()
 
-        # Only process rows with non-null Aliases
-        for _, row in cde_definitions[cde_definitions['Aliases'].notna()].iterrows():
-            if pd.isna(row['Aliases']):
-                continue
+        try:
+            # Process rows with non-null Aliases
+            alias_rows = cde_definitions[cde_definitions['Aliases'].notna()]
+            for _, row in alias_rows.iterrows():
+                element_name = row['ElementName']
+                aliases = set(alias.strip() for alias in str(row['Aliases']).split(','))
                 
-            aliases = set(alias.strip() for alias in str(row['Aliases']).split(','))
-            element_name = row['ElementName']
-            
-            # Check if any reproschema ID matches any alias
-            for repro_id in reproschema_ids:
-                if repro_id in used_repro_ids:
-                    continue
-                    
-                if repro_id in aliases:
-                    matches[element_name] = (repro_id, 1.0)  # Perfect match score
-                    newly_used_ids.add(repro_id)
-                    break
+                # Find matching reproschema ID
+                for repro_id in reproschema_ids:
+                    if repro_id in used_repro_ids:
+                        continue
+                        
+                    if repro_id in aliases:
+                        matches[element_name] = (repro_id, 1.0)
+                        newly_used_ids.add(repro_id)
+                        break
 
-        return matches, newly_used_ids
+            return matches, newly_used_ids
+            
+        except Exception as e:
+            logger.error(f"Error in alias matching: {str(e)}")
+            return {}, set()
 
     def _similarity_match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict],
                          used_repro_ids: Set[str], threshold: float = 0.5) -> Dict[str, Tuple[str, float]]:
-        """Step 3: Semantic similarity matching for remaining items"""
-        # Filter out already matched reproschema responses
-        remaining_responses = [r for r in reproschema_responses if r["id"] not in used_repro_ids]
-        
-        if not remaining_responses:
+        """Find matches based on semantic similarity"""
+        try:
+            # Filter out already matched responses
+            remaining_responses = [r for r in reproschema_responses if r["id"] not in used_repro_ids]
+            
+            if not remaining_responses:
+                return {}
+
+            # Prepare texts for comparison
+            cde_descriptions = cde_definitions["ElementDescription"].tolist()
+            cde_names = cde_definitions["ElementName"].tolist()
+            reproschema_questions = [r["question"] for r in remaining_responses]
+            reproschema_ids = [r["id"] for r in remaining_responses]
+
+            # Compute embeddings and similarities in batches
+            matches = {}
+            batch_size = config.batch_size
+            
+            for i in range(0, len(cde_descriptions), batch_size):
+                cde_batch = cde_descriptions[i:i + batch_size]
+                cde_embeddings = torch.stack([self._get_embedding(desc) for desc in cde_batch])
+                
+                for j in range(0, len(reproschema_questions), batch_size):
+                    repro_batch = reproschema_questions[j:j + batch_size]
+                    repro_embeddings = torch.stack([self._get_embedding(q) for q in repro_batch])
+                    
+                    # Compute similarity matrix for current batch
+                    similarity_matrix = util.cos_sim(cde_embeddings, repro_embeddings)
+                    similarity_matrix = similarity_matrix.cpu().numpy()
+                    
+                    # Find best matches in current batch
+                    for batch_idx, cde_idx in enumerate(range(i, min(i + batch_size, len(cde_names)))):
+                        best_match_idx = j + np.argmax(similarity_matrix[batch_idx])
+                        best_score = similarity_matrix[batch_idx][best_match_idx - j]
+                        
+                        if best_score >= threshold:
+                            matches[cde_names[cde_idx]] = (reproschema_ids[best_match_idx], float(best_score))
+
+            return matches
+            
+        except Exception as e:
+            logger.error(f"Error in similarity matching: {str(e)}")
             return {}
 
-        cde_descriptions = cde_definitions["ElementDescription"].tolist()
-        cde_names = cde_definitions["ElementName"].tolist()
-        
-        reproschema_questions = [r["question"] for r in remaining_responses]
-        reproschema_ids = [r["id"] for r in remaining_responses]
-
-        # Compute embeddings and similarities
-        cde_embeddings = self.model.encode(cde_descriptions, convert_to_tensor=True)
-        repro_embeddings = self.model.encode(reproschema_questions, convert_to_tensor=True)
-        similarity_matrix = util.cos_sim(cde_embeddings, repro_embeddings)
-        similarity_matrix = similarity_matrix.cpu().numpy()
-
-        matches = {}
-        for i, cde_name in enumerate(cde_names):
-            best_match_idx = np.argmax(similarity_matrix[i])
-            best_score = similarity_matrix[i][best_match_idx]
-            
-            if best_score >= threshold:
-                matches[cde_name] = (reproschema_ids[best_match_idx], float(best_score))
-
-        return matches
-
     async def _agent_match(self, unmatched_responses: List[Dict], cde_definitions: pd.DataFrame) -> Dict[str, Tuple[str, float]]:
-        """Step 4: Use agent to match remaining items"""
+        """Use LLM to match remaining items"""
         matches = {}
         
         system_prompt = """You are a data mapping expert. Analyze the question from ReproSchema and the ElementDescription 
         from CDE to determine if they correspond to each other. Return your response as a JSON with 'matched_element' and 'confidence'."""
         
-        for response in unmatched_responses:
-            prompt = f"""
-            ReproSchema Question: {response['question']}
-            ReproSchema ID: {response['id']}
-            
-            Available CDE Elements:
-            {cde_definitions[['ElementName', 'ElementDescription']].to_string()}
-            
-            Which ElementName best matches this question? Return as JSON: {{"matched_element": "element_name", "confidence": 0.0-1.0}}
-            """
-            
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=prompt)
-            ]
-            
-            result = await self.llm.ainvoke(messages)
-            try:
-                result_json = json.loads(result.content)
-                if result_json['confidence'] > 0.7:  # Adjust threshold as needed
-                    matches[result_json['matched_element']] = (response['id'], result_json['confidence'])
-            except json.JSONDecodeError:
-                continue
+        try:
+            for response in unmatched_responses:
+                prompt = f"""
+                ReproSchema Question: {response['question']}
+                ReproSchema ID: {response['id']}
                 
-        return matches
+                Available CDE Elements:
+                {cde_definitions[['ElementName', 'ElementDescription']].to_string()}
+                
+                Which ElementName best matches this question? Return as JSON: {{"matched_element": "element_name", "confidence": 0.0-1.0}}
+                """
+                
+                messages = [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=prompt)
+                ]
+                
+                result = await self.llm.ainvoke(messages)
+                try:
+                    # Extract JSON from response
+                    json_match = re.search(r'\{.*\}', result.content.strip())
+                    if json_match:
+                        json_str = json_match.group()
+                        json_data = json.loads(json_str)
+                        if json_data['confidence'] > 0.7:
+                            matches[json_data['matched_element']] = (response['id'], json_data['confidence'])
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning(f"Error parsing LLM response: {str(e)}")
+                    continue
+                    
+            return matches
+            
+        except Exception as e:
+            logger.error(f"Error in agent matching: {str(e)}")
+            return {}
 
-    async def match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict], threshold=0.5):
+    async def match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict],
+                threshold: float = config.similarity_threshold) -> Dict[str, Tuple[str, float]]:
         """Main matching function that coordinates all matching steps"""
-        reproschema_ids = [r["id"] for r in reproschema_responses]
-        cde_names = cde_definitions["ElementName"].tolist()
-        all_matches = {}
-        
-        # Step 1: Exact ID matching
-        exact_matches, used_ids = self._exact_id_match(reproschema_ids, cde_names)
-        all_matches.update(exact_matches)
-        
-        # Step 2: Alias matching
-        alias_matches, newly_used_ids = self._alias_match(reproschema_ids, cde_definitions, used_ids)
-        all_matches.update(alias_matches)
-        used_ids.update(newly_used_ids)
-        
-        # Step 3: Similarity matching
-        similarity_matches = self._similarity_match(cde_definitions, reproschema_responses, used_ids, threshold)
-        all_matches.update(similarity_matches)
-        
-        # Get remaining unmatched responses
-        matched_ids = {match[0] for match in all_matches.values() if match is not None}
-        unmatched_responses = [r for r in reproschema_responses if r["id"] not in matched_ids]
-        
-        # Step 4: Agent matching for remaining items
-        if unmatched_responses:
-            agent_matches = await self._agent_match(unmatched_responses, cde_definitions)
-            all_matches.update(agent_matches)
-        
-        return all_matches
+        try:
+            # Extract IDs and URLs from input data
+            for response in reproschema_responses:
+                self.logger.info(f"Raw response data: {json.dumps(response, indent=2)}")
+            
+            # Extract IDs and URLs
+            reproschema_items = [(r.get("id", ""), r.get("isAbout", "")) for r in reproschema_responses]
+            self.logger.info("=== Processing Items ===")
+            
+            matches = {}
+            used_ids = set()
 
-class MappingResponse(BaseModel):
-    mapped_value: str = Field(description="The mapped CDE value that best matches the input response value")
+            # Match based on both ID and URL
+            for repro_id, about_url in reproschema_items:
+                if not about_url:  # Skip if URL is empty
+                    self.logger.warning(f"Empty URL for ID: {repro_id}")
+                    continue
+                    
+                self.logger.info(f"Checking URL: {about_url}")
+                
+                # Get item name from URL
+                if "items/interview_age" in about_url:
+                    self.logger.info(f"Found interview_age match with ID: {repro_id}")
+                    matches["interview_age"] = (repro_id, 1.0)
+                    used_ids.add(repro_id)
+                elif "items/sex" in about_url:
+                    self.logger.info(f"Found sex match with ID: {repro_id}")
+                    matches["sex"] = (repro_id, 1.0)
+                    used_ids.add(repro_id)
 
+            # Log mapping results
+            self.logger.info("=== Initial Matches ===")
+            self.logger.info(f"Matches found: {matches}")
+            self.logger.info(f"Used IDs: {used_ids}")
+                
+            # Step 2: Exact ID matching for remaining items
+            reproschema_ids = [r[0] for r in reproschema_items if r[0] not in used_ids]
+            cde_names = cde_definitions["ElementName"].tolist()
+            exact_matches, newly_used_ids = self._exact_id_match(reproschema_ids, cde_names)
+            matches.update(exact_matches)
+            used_ids.update(newly_used_ids)
+            
+            self.logger.debug(f"After exact matching: {matches}")
+
+            # Step 3: Alias matching
+            alias_matches, newly_used_ids = self._alias_match(reproschema_ids, cde_definitions, used_ids)
+            matches.update(alias_matches)
+            used_ids.update(newly_used_ids)
+            
+            # Step 4: Similarity matching for remaining items
+            unmatched_responses = [r for r in reproschema_responses if r["id"] not in used_ids]
+            if unmatched_responses:
+                similarity_matches = self._similarity_match(cde_definitions, unmatched_responses, used_ids, threshold)
+                matches.update(similarity_matches)
+                used_ids.update(match[0] for match in similarity_matches.values() if match is not None)
+            
+            # Step 5: Agent matching as last resort
+            final_unmatched = [r for r in reproschema_responses if r["id"] not in used_ids]
+            if final_unmatched:
+                agent_matches = await self._agent_match(final_unmatched, cde_definitions)
+                matches.update(agent_matches)
+            
+            return matches
+
+        except Exception as e:
+            logger.error(f"Error in matching process: {str(e)}")
+            raise MappingError(f"Failed to complete matching process: {str(e)}")
+        
+    # Response Mapping
 class ResponseMapper:
+    """Maps ReproSchema responses to CDE format"""
+    
     def __init__(self, cde_definitions: pd.DataFrame):
-        self.cde_definitions = cde_definitions
-        self.llm = ChatOllama(model="deepseek-r1")
+        self.logger = logging.getLogger(__name__)
+        required_columns = ["ElementName", "DataType", "ElementDescription", "Notes", "ValueRange"]
+        missing_columns = [col for col in required_columns if col not in cde_definitions.columns]
+        if missing_columns:
+            raise ValueError(f"Missing required columns in CDE definitions: {missing_columns}")
+        self.cde_definitions = cde_definitions.copy()
+        self.llm = ChatOllama(model=config.llm_model)
+        self._cde_mappings_cache: Dict[str, CDEMapping] = {}
         
         self.system_message = SystemMessage(content="""You are a response mapping system that matches semantically equivalent responses between scales.
             Your task is to determine if the meaning in ReproSchema matches any meaning in the CDE scale.""")
@@ -247,6 +421,13 @@ class ResponseMapper:
             {cde_mapping}
 
             Task: Find the CDE option that is semantically closest to the ReproSchema description.
+
+            Instructions:
+            1. Look for direct semantic equivalence between ReproSchema and CDE value descriptions
+            2. Map reproschema value to the CDE value that best preserves the meaning of the response
+            3. If CDE value is string (e.g., "M" or "F" in sex), keep the string value
+            4. Only use -9 if no semantic equivalent exists or reproschema value is null
+
             Consider:
             - Similar time periods (e.g., "less than a day" ≈ "once or twice")
             - Similar frequencies (e.g., "multiple times" ≈ "several times")
@@ -254,164 +435,294 @@ class ResponseMapper:
 
             After your analysis, respond with ONLY a JSON object in this format: {{"mapped_value": "value"}}
             Where "value" is the matching CDE value or "-9" if no good match exists.
+            DO NOT include any other text in your response."""
 
-            Example responses:
-            {{"mapped_value": "1"}}  # When a good match is found and the value is 1
-            {{"mapped_value": "-9"}}  # When no semantic match exists"""
+    def _parse_cde_notes(self, notes: str, value_range: Optional[str] = None) -> CDEMapping:
+        """Parse CDE notes and value range into structured mapping format"""
+        mapping = CDEMapping()
+
+        try:
+            if pd.notna(value_range):
+                # Split value range on ';' to separate numeric ranges and extra values
+                parts = value_range.split(";")
+                range_part = parts[0].strip()  # First part should be the range (if any)
+                extra_values = {p.strip() for p in parts[1:]}  # Additional values like -9
+
+                # Handle numeric range
+                if "::" in range_part:
+                    try:
+                        min_val, max_val = map(int, range_part.split("::"))
+                        mapping.value_range = range_part
+                        mapping.min_value = min_val
+                        mapping.max_value = max_val
+                        mapping.valid_values.update(str(i) for i in range(min_val, max_val + 1))
+                    except ValueError:
+                        logger.warning(f"Could not parse numeric range: {range_part}")
+
+                # Add any extra values (e.g., -9)
+                mapping.valid_values.update(extra_values)
+
+            # Parse notes for mappings
+            if pd.notna(notes):
+                for part in notes.split(";"):
+                    part = part.strip()
+                    if not part:
+                        continue
+
+                    if "=" in part:
+                        value, description = part.split("=", 1)
+                        value, description = value.strip(), description.strip()
+                        mapping.numeric_to_string[value] = description
+                        mapping.string_to_numeric[description] = value
+                        mapping.valid_values.add(value)
+                    else:
+                        mapping.valid_values.add(part)
+
+            return mapping
+
+        except Exception as e:
+            logger.error(f"Error parsing CDE definition: {str(e)}")
+            return CDEMapping()
+
+    def _get_cde_mapping(self, cde_element: str) -> Optional[CDEMapping]:
+        if cde_element not in self._cde_mappings_cache:
+            cde_row = self.cde_definitions[self.cde_definitions["ElementName"] == cde_element]
+            if cde_row.empty:
+                return None
+                
+            notes = cde_row["Notes"].iloc[0]
+            value_range = cde_row["ValueRange"].iloc[0] if "ValueRange" in cde_row.columns else None
+            self._cde_mappings_cache[cde_element] = self._parse_cde_notes(notes, value_range)
+                
+        return self._cde_mappings_cache[cde_element]
 
     def _get_response_text(self, response_value: Any, response_options: List[Dict]) -> Optional[str]:
-        """Get the text description for a response value."""
+        """Get text description for a response value"""
         if not response_options:
             return None
             
-        for option in response_options:
-            if option.get('value') == response_value:
-                # Extract the English text from the name dictionary
-                name_dict = option.get('name', {})
-                return name_dict.get('en')
-        return None
+        try:
+            for option in response_options:
+                if option.get('value') == response_value:
+                    name_dict = option.get('name', {})
+                    return name_dict.get('en')
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting response text: {str(e)}")
+            return None
 
-    async def _find_best_match(self, response_value: Any, cde_mapping: Dict[str, str], response_options: Optional[List[Dict]]) -> str:
-        """Find the best matching CDE value."""
+    def _validate_and_convert_value(self, value: str, data_type: str, cde_mapping: CDEMapping) -> str:
+        """Validate and convert value based on CDE DataType"""
+        logger.debug(f"Validating value: {value}, type: {data_type}")
+        
+        if value == "-9":
+            logger.debug("Value is -9, returning appropriate null value")
+            return "NR" if data_type == "String" else "-9"
+                
+        try:
+            # Special handling for sex field
+            if "F" in cde_mapping.valid_values and "M" in cde_mapping.valid_values:
+                logger.debug("Handling sex field conversion")
+                converted = self._convert_sex_value(value)
+                logger.debug(f"Converted sex value from {value} to {converted}")
+                return converted
+                    
+            # Handle integer fields
+            if data_type == "Integer":
+                try:
+                    int_value = int(float(str(value)))
+                    # Use the is_valid_value method which now handles numeric ranges
+                    if cde_mapping.is_valid_value(str(int_value)):
+                        return str(int_value)
+                    self.logger.warning(f"Value {int_value} outside valid range: {cde_mapping.min_value}::{cde_mapping.max_value}")
+                    return "-9"
+                except (ValueError, TypeError):
+                    self.logger.warning(f"Could not convert {value} to integer")
+                    return "-9"
+                        
+            # String fields
+            if data_type == "String":
+                logger.debug(f"Processing string value: {value}")
+                # First try direct validation
+                if hasattr(cde_mapping, 'is_valid_value') and cde_mapping.is_valid_value(value):
+                    return value
+                        
+                # Then try mappings
+                if value in cde_mapping.string_to_numeric:
+                    mapped = cde_mapping.string_to_numeric[value]
+                    logger.debug(f"Mapped string to numeric: {value} -> {mapped}")
+                    return mapped
+                elif value in cde_mapping.numeric_to_string:
+                    mapped = cde_mapping.numeric_to_string[value]
+                    logger.debug(f"Mapped numeric to string: {value} -> {mapped}")
+                    return mapped
+                    
+                return "NR"
+                
+            return value
+                        
+        except Exception as e:
+            logger.error(f"Error converting value {value} to {data_type}: {str(e)}")
+            return "NR" if data_type == "String" else "-9"
+
+    def _convert_sex_value(self, value: str) -> str:
+        """Convert schema.org sex values to CDE format"""
+        sex_mapping = {
+            "http://schema.org/Female": "F",
+            "http://schema.org/Male": "M",
+            "Female": "F",
+            "Male": "M",
+            "F": "F",
+            "M": "M"
+        }
+        logger.debug(f"Converting sex value: {value}")
+        result = sex_mapping.get(value, "NR")
+        logger.debug(f"Converted sex value to: {result}")
+        return result
+
+    async def _find_best_match(self, response_value: Any, cde_mapping: CDEMapping, 
+                     response_options: Optional[List[Dict]]) -> str:
+        """Find best matching CDE value for a response"""
         if response_value is None:
             return "-9"
             
-        # Try exact value match first
-        str_value = str(response_value)
-        if str_value in cde_mapping:
-            return str_value
-        
-        # Get the text meaning of this value in ReproSchema
-        response_text = self._get_response_text(response_value, response_options)
-        
-        # Try direct text match
-        if response_text and response_text in cde_mapping:
-            return cde_mapping[response_text]
-        
-        # Use LLM for semantic matching
         try:
-            prompt = self.prompt_template.format(
-                response_value=response_value,
-                response_text=response_text or "No description available",
-                cde_mapping=json.dumps(cde_mapping, indent=2)
-            )
-            
-            messages = [
-                self.system_message,
-                HumanMessage(content=prompt)
-            ]
-            
-            result = await self.llm.ainvoke(messages)
-            result_content = result.content.strip()
-            
-            # Extract JSON from the response
-            try:
-                # Try to find JSON-like string in the output
-                import re
-                json_match = re.search(r'\{.*\}', result_content)
-                if json_match:
-                    json_str = json_match.group()
-                    json_data = json.loads(json_str)
-                    mapped_value = json_data.get('mapped_value', '-9')
-                    
-                    # Validate mapped value
-                    if mapped_value in cde_mapping.values() or mapped_value == "-9":
-                        return mapped_value
-                        
-                print(f"Warning: Could not extract valid JSON from: {result_content}")
-                return "-9"
+            # Convert response_value to string for comparison
+            str_value = str(response_value)
+
+            # Special handling for sex field
+            if "F" in cde_mapping.valid_values and "M" in cde_mapping.valid_values:
+                return self._convert_sex_value(str_value)
                 
-            except json.JSONDecodeError as e:
-                print(f"JSON parsing error: {e}")
-                print(f"Raw LLM output: {result_content}")
-                return "-9"
+            # Direct value check (including numeric ranges)
+            if cde_mapping.is_valid_value(str_value):
+                return str_value
+
+            # Get text description if available
+            response_text = self._get_response_text(response_value, response_options)
+            
+            # Try direct text match if we have response text
+            if response_text and response_text in cde_mapping.string_to_numeric:
+                return cde_mapping.string_to_numeric[response_text]
+            
+            # Convert CDEMapping to dict for LLM prompt
+            mapping_dict = {
+                "numeric_to_string": cde_mapping.numeric_to_string,
+                "string_to_numeric": cde_mapping.string_to_numeric,
+                "valid_values": list(cde_mapping.valid_values)
+            }
+
+            # Use LLM for semantic matching only if we have a response text or non-numeric value
+            if response_text or not str_value.replace('.', '').isdigit():
+                prompt = self.prompt_template.format(
+                    response_value=str_value,
+                    response_text=response_text or "No description available",
+                    cde_mapping=json.dumps(mapping_dict, indent=2)
+                )
+                
+                messages = [
+                    self.system_message,
+                    HumanMessage(content=prompt)
+                ]
+                
+                result = await self.llm.ainvoke(messages)
+                result_content = result.content.strip()
+                
+                try:
+                    # Try to find JSON in the response
+                    json_match = re.search(r'\{[^}]+\}', result_content)
+                    if json_match:
+                        json_str = json_match.group()
+                        json_str = json_str.replace("'", '"')
+                        json_str = re.sub(r'(\w+):', r'"\1":', json_str)
+                        
+                        json_data = json.loads(json_str)
+                        mapped_value = json_data.get('mapped_value', '-9')
+                        
+                        if cde_mapping.is_valid_value(mapped_value):
+                            return mapped_value
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to parse LLM response: {result_content}")
+                
+            return "-9"
                 
         except Exception as e:
-            print(f"Error in LLM mapping: {e}")
-            print(f"Context: value={response_value}, text={response_text}")
+            logger.error(f"Error finding best match: {str(e)}")
             return "-9"
-    
-    def _parse_cde_notes(self, notes: str) -> Dict[str, str]:
-        """Parse CDE notes string into a mapping dictionary."""
-        if pd.isna(notes):
-            return {}
-            
-        mapping = {}
-        parts = notes.split(';')
-        for part in parts:
-            part = part.strip()
-            if '=' in part:
-                value, name = part.split('=', 1)
-                value = value.strip()
-                name = name.strip()
-                mapping[name] = value
-                mapping[value] = value
-        return mapping
 
-    async def map_responses(self, reproschema_responses: List[Dict], matched_mapping: Dict[str, Tuple[str, float]]) -> Dict[str, str]:
-        """Map ReproSchema response values to CDE values."""
+    async def map_responses(self, reproschema_responses: List[Dict], 
+                       matched_mapping: Dict[str, Tuple[str, float]]) -> Dict[str, str]:
+        """Map ReproSchema responses to CDE values"""
         mapped_data = {}
         repro_lookup = {r["id"]: r for r in reproschema_responses}
         
-        for cde_element, match_info in matched_mapping.items():
-            if match_info is None:
-                mapped_data[cde_element] = "-9"
-                continue
+        try:
+            self.logger.info("=== Start Response Mapping ===")
+            self.logger.info(f"Matched mapping: {matched_mapping}")
+            
+            for cde_element, match_info in matched_mapping.items():
+                self.logger.info(f"\nProcessing CDE element: {cde_element}")
                 
-            repro_id, _ = match_info
-            response = repro_lookup.get(repro_id)
-            
-            if response is None:
-                mapped_data[cde_element] = "-9"
-                continue
+                if match_info is None:
+                    self.logger.warning(f"No match info for {cde_element}")
+                    mapped_data[cde_element] = "-9"
+                    continue
+                    
+                repro_id, confidence = match_info
+                response = repro_lookup.get(repro_id)
                 
-            cde_row = self.cde_definitions[self.cde_definitions["ElementName"] == cde_element]
-            if cde_row.empty:
-                mapped_data[cde_element] = "-9"
-                continue
+                if response is None:
+                    self.logger.warning(f"No response found for ID: {repro_id}")
+                    mapped_data[cde_element] = "-9"
+                    continue
+                    
+                self.logger.info(f"Found response: {response}")
                 
-            cde_notes = cde_row["Notes"].iloc[0]
-            cde_mapping = self._parse_cde_notes(cde_notes)
+                # Get CDE information
+                cde_row = self.cde_definitions[self.cde_definitions["ElementName"] == cde_element]
+                if cde_row.empty:
+                    self.logger.warning(f"No CDE definition found for {cde_element}")
+                    mapped_data[cde_element] = "-9"
+                    continue
+                    
+                data_type = cde_row["DataType"].iloc[0]
+                value_range = cde_row["ValueRange"].iloc[0] if "ValueRange" in cde_row.columns else None
+                self.logger.info(f"Data type: {data_type}")
+                self.logger.info(f"Value range: {value_range}")
+                
+                cde_mapping = self._get_cde_mapping(cde_element)
+                if cde_mapping is None:
+                    self.logger.warning(f"Could not get CDE mapping for {cde_element}")
+                    mapped_data[cde_element] = "-9"
+                    continue
+                
+                # Get semantic mapping
+                raw_value = await self._find_best_match(
+                    response.get("response_value"),
+                    cde_mapping,
+                    response.get("response_options")
+                )
+                self.logger.info(f"Raw value after best match: {raw_value}")
+                
+                # Validate and convert
+                final_value = self._validate_and_convert_value(raw_value, data_type, cde_mapping)
+                self.logger.info(f"Final converted value: {final_value}")
+                
+                mapped_data[cde_element] = final_value
             
-            response_value = response.get("response_value")
-            response_options = response.get("response_options")
-            
-            mapped_value = await self._find_best_match(response_value, cde_mapping, response_options)
-            mapped_data[cde_element] = mapped_value
-            
-        return mapped_data
+            self.logger.info("\n=== Final Mapped Data ===")
+            self.logger.info(mapped_data)
+            return mapped_data
+                
+        except Exception as e:
+            self.logger.error(f"Error mapping responses: {str(e)}")
+            raise MappingError(f"Failed to map responses: {str(e)}")
 
     def create_template_row(self, mapped_data: Dict[str, str], template_columns: List[str]) -> List[str]:
-        """Create a row for the template using mapped data."""
-        return [mapped_data.get(col, "-9") for col in template_columns]
-
-# Example of how to use it in the mapping.py script:
-async def map_schema(cde_csv_path: str, reproschema_response_path: str, cde_template_path: str):
-    # Load CDE definitions and template
-    cde_definitions = pd.read_csv(cde_csv_path)
-    template_df = pd.read_csv(cde_template_path, header=1)
-    template_columns = template_df.columns.tolist()
-
-    # Load and extract ReproSchema responses
-    with open(reproschema_response_path) as f:
-        response_data = json.load(f)
-    reproschema_responses = extract_reproschema_responses(response_data)
-
-    # Get matches using semantic matcher
-    semantic_matcher = SemanticMatcher()
-    matched_mapping = semantic_matcher.match(
-        cde_definitions=cde_definitions,
-        reproschema_responses=reproschema_responses
-    )
-
-    # Map responses using enhanced mapper
-    response_mapper = ResponseMapper(cde_definitions)
-    mapped_data = await response_mapper.map_responses(reproschema_responses, matched_mapping)
-
-    # Create template row
-    template_row = response_mapper.create_template_row(mapped_data, template_columns)
-
-    # Create and save output DataFrame
-    df = pd.DataFrame([template_row], columns=template_columns)
-    df.to_csv("output_template.csv", index=False)
-    return df
+        """Create a row for the template using mapped data"""
+        try:
+            return [mapped_data.get(col, "-9") for col in template_columns]
+        except Exception as e:
+            logger.error(f"Error creating template row: {str(e)}")
+            return ["-9"] * len(template_columns)

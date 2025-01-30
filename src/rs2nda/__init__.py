@@ -5,7 +5,6 @@ from .rs2nda import (
     extract_reproschema_responses,
     CDEDefinition,
     ReproSchemaResponse,
-    MatchedMapping
 )
 
 __all__ = [
@@ -14,5 +13,4 @@ __all__ = [
     'extract_reproschema_responses',
     'CDEDefinition',
     'ReproSchemaResponse',
-    'MatchedMapping'
 ]
