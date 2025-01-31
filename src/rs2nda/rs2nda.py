@@ -191,14 +191,26 @@ async def extract_reproschema_responses(response_jsonld: List[Dict]) -> List[Dic
                         logger.debug(f"Found question: {question}")
                         
                         # First try to get response options directly from item content
-                        direct_options = item_content.get("responseOptions", {})
+                        direct_options = item_content.get("responseOptions")
                         if direct_options:
-                            direct_choices = direct_options.get("choices", [])
-                            if direct_choices:
-                                logger.debug("Found response options directly in item content")
-                                response_options = direct_choices
+                            if isinstance(direct_options, str):
+                                # It's a path to valueConstraints
+                                logger.debug(f"Found response options path: {direct_options}")
+                                constraints_url = get_constraints_url(is_about, direct_options)
+                                if constraints_url:
+                                    try:
+                                        constraints_content = await url_cache.fetch_item_content(constraints_url)
+                                        response_options = constraints_content.get("choices", [])
+                                        if response_options:
+                                            logger.debug("Found response options from constraints URL")
+                                    except Exception as e:
+                                        logger.error(f"Error fetching constraints content: {str(e)}")
                             else:
-                                logger.debug("No direct choices found in responseOptions")
+                                # Direct choices in item content
+                                choices = direct_options.get("choices", [])
+                                if choices:
+                                    logger.debug("Found response options directly in item content")
+                                    response_options = choices
                         
                         # If no direct options found, try getting from URL
                         if not response_options:
@@ -477,7 +489,7 @@ class QuestionMatcher:
             logger.error(f"Error in matching process: {str(e)}")
             raise MappingError(f"Failed to complete matching process: {str(e)}")
         
-    # Response Mapping
+# Response Mapping
 class ResponseMapper:
     """Maps ReproSchema responses to CDE format"""
     SEX_MAPPING = {
