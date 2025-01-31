@@ -85,8 +85,10 @@ def test_sex_value_conversion():
         'ValueRange': None
     }))
     
-    # Test various sex value formats
-    assert response_mapper._convert_sex_value('http://schema.org/Female') == 'F'
-    assert response_mapper._convert_sex_value('Male') == 'M'
-    assert response_mapper._convert_sex_value('F') == 'F'
-    assert response_mapper._convert_sex_value('invalid') == 'NR'
+    cde_mapping = response_mapper._get_cde_mapping('sex')
+    
+    # Test various sex value formats using _validate_and_convert_value
+    assert response_mapper._validate_and_convert_value('http://schema.org/Female', 'String', cde_mapping) == 'F'
+    assert response_mapper._validate_and_convert_value('Male', 'String', cde_mapping) == 'M'
+    assert response_mapper._validate_and_convert_value('F', 'String', cde_mapping) == 'F'
+    assert response_mapper._validate_and_convert_value('invalid', 'String', cde_mapping) == 'NR'
