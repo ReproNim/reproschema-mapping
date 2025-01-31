@@ -43,16 +43,16 @@ class ResponseProcessor:
         with open(reproschema_response_path) as f:
             response_data = json.load(f)
 
-        # Extract the reproschema responses
-        processed_responses = extract_reproschema_responses(response_data)
+        # Extract and await the reproschema responses immediately
+        processed_responses = await extract_reproschema_responses(response_data)
 
-        # Get matches using semantic matcher - ADD await HERE
+        # Get matches using semantic matcher
         question_matcher = QuestionMatcher()
-        matched_mapping = await question_matcher.match(  # Add await here
+        matched_mapping = await question_matcher.match(
             cde_definitions=cde_definitions,
-            reproschema_responses=processed_responses
+            reproschema_responses=processed_responses  # Pass the processed responses directly
         )
-
+        
         # Map responses using response mapper
         response_mapper = ResponseMapper(cde_definitions)
         mapped_data = await response_mapper.map_responses(processed_responses, matched_mapping)

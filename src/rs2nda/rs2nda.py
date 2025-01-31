@@ -2,6 +2,7 @@
 ReproSchema to NDA (National Data Archive) converter.
 Provides functionality to map ReproSchema responses to CDE (Common Data Elements) format.
 """
+import aiohttp
 import asyncio
 from functools import lru_cache
 import json
@@ -84,81 +85,141 @@ class MappingResult(BaseModel):
     repro_id: str
     confidence: float
 
-# Utility Classes
 class URLCache:
-    """Cache for URL content"""
-    def __init__(self, max_size: int = config.cache_size):
-        self._cache: Dict[str, Any] = {}
+    def __init__(self, max_size: int = 1000):
+        self._cache = {}
         self.max_size = max_size
-
-    @lru_cache(maxsize=1000)
-    def fetch_item_content(self, url: str) -> Dict:
-        """Fetch and cache content from URL"""
+        self._session = None
+    
+    async def _get_session(self):
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
+        return self._session
+    
+    async def fetch_item_content(self, url: str) -> Dict:
+        if url in self._cache:
+            return self._cache[url]
+            
         try:
-            if url not in self._cache:
-                response = requests.get(url)
-                response.raise_for_status()
-                self._cache[url] = response.json()
+            session = await self._get_session()
+            async with session.get(url) as response:
+                text = await response.text()
+                content = json.loads(text)
                 
-                # Clean cache if exceeds max size
-                if len(self._cache) > self.max_size:
+                if len(self._cache) >= self.max_size:
+                    # Remove oldest item
                     self._cache.pop(next(iter(self._cache)))
                     
-            return self._cache[url]
+                self._cache[url] = content
+                return content
+                
         except Exception as e:
             logger.error(f"Error fetching URL {url}: {str(e)}")
             raise
+    
+    async def close(self):
+        if self._session:
+            await self._session.close()
 
 url_cache = URLCache()
 
 def get_constraints_url(is_about_url: str, response_options: Optional[str]) -> Optional[str]:
-    """Construct constraints URL from isAbout URL"""
+    """
+    Construct constraints URL from isAbout URL and response options path
+    
+    Args:
+        is_about_url: URL of the item content
+        response_options: Path to response options (e.g. "../valueConstraintsFirst19")
+        
+    Returns:
+        Full URL to the constraints content or None if cannot be constructed
+    """
     if not response_options or not isinstance(response_options, str):
         return None
     
     try:
+        # Split URL into parts
         url_parts = is_about_url.split("/")
+        
+        # Find the items directory in the path
         if "items" not in url_parts:
             return None
-        
+            
         items_index = url_parts.index("items")
         base_parts = url_parts[:items_index]
         
-        if response_options.startswith("../"):
-            response_options = response_options[3:]
+        # Handle relative paths
+        options_path = response_options
+        if options_path.startswith("../"):
+            options_path = options_path[3:]  # Remove ../ prefix
+            
+        # Construct full URL
+        constraints_url = "/".join(base_parts + [options_path])
+        logger.debug(f"Constructed constraints URL: {constraints_url}")
+        return constraints_url
         
-        return "/".join(base_parts + [response_options])
     except Exception as e:
         logger.error(f"Error constructing constraints URL: {str(e)}")
         return None
 
-def extract_reproschema_responses(response_jsonld: List[Dict]) -> List[Dict]:
-    """Extract responses from ReproSchema JSON-LD"""
+async def extract_reproschema_responses(response_jsonld: List[Dict]) -> List[Dict]:
+    """Extract responses from ReproSchema JSON-LD including questions and response options"""
     logger = logging.getLogger(__name__)
     responses = []
+    
     for entry in response_jsonld:
         try:
             if entry.get("@type") == "reproschema:Response":
                 logger.debug(f"Processing response entry: {json.dumps(entry, indent=2)}")
                 
-                # Get the response ID
-                response_id = entry.get("@id", "")
-                
                 # Get the isAbout URL
                 is_about = entry.get("isAbout", "")
                 logger.info(f"Found isAbout URL: {is_about}")
                 
+                # Fetch content from isAbout URL to get ID and question
+                response_id = ""
+                question = ""
+                response_options_path = None
+                
+                if is_about:
+                    try:
+                        item_content = await url_cache.fetch_item_content(is_about)
+                        # Get ID from the isAbout content
+                        response_id = item_content.get("id", "")
+                        question = item_content.get("question", {}).get("en", "")
+                        response_options_path = item_content.get("responseOptions")
+                        logger.debug(f"Found response ID: {response_id}")
+                        logger.debug(f"Found question: {question}")
+                        logger.debug(f"Found response options path: {response_options_path}")
+                    except Exception as e:
+                        logger.error(f"Error fetching item content: {str(e)}")
+                
+                # Get response options if available
+                response_options = None
+                if response_options_path:
+                    constraints_url = get_constraints_url(is_about, response_options_path)
+                    if constraints_url:
+                        try:
+                            constraints_content = await url_cache.fetch_item_content(constraints_url)
+                            choices = constraints_content.get("choices", [])
+                            if choices:
+                                response_options = choices
+                                logger.debug(f"Found response options: {json.dumps(choices, indent=2)}")
+                        except Exception as e:
+                            logger.error(f"Error fetching constraints content: {str(e)}")
+                
                 # Construct response
                 response = ReproSchemaResponse(
-                    id=response_id,
-                    question="",  # We'll get this from item_content later if needed
+                    id=response_id, 
+                    question=question,
                     response_value=entry.get("value"),
-                    response_options=None,  # We'll get this from options_content later if needed
-                    isAbout=is_about  # Add the isAbout field to track the URL
+                    response_options=response_options,
+                    isAbout=is_about
                 )
                 
-                responses.append(response.dict())
-                logger.debug(f"Added response: {json.dumps(response.dict(), indent=2)}")
+                responses.append(response.model_dump())
+                logger.debug(f"Added response: {json.dumps(response.model_dump(), indent=2)}")
+                
         except Exception as e:
             logger.error(f"Error extracting response: {str(e)}")
             continue
@@ -326,7 +387,7 @@ class QuestionMatcher:
             return {}
 
     async def match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict],
-                threshold: float = config.similarity_threshold) -> Dict[str, Tuple[str, float]]:
+            threshold: float = config.similarity_threshold) -> Dict[str, Tuple[str, float]]:
         """Main matching function that coordinates all matching steps"""
         try:
             # Extract IDs and URLs from input data
@@ -590,15 +651,11 @@ class ResponseMapper:
         try:
             # Convert response_value to string for comparison
             str_value = str(response_value)
-
-            # Special handling for sex field
-            if "F" in cde_mapping.valid_values and "M" in cde_mapping.valid_values:
-                return self._convert_sex_value(str_value)
-                
-            # Direct value check (including numeric ranges)
-            if cde_mapping.is_valid_value(str_value):
+            
+            # Try exact value match first
+            if str_value in cde_mapping.valid_values:
                 return str_value
-
+            
             # Get text description if available
             response_text = self._get_response_text(response_value, response_options)
             
@@ -606,45 +663,41 @@ class ResponseMapper:
             if response_text and response_text in cde_mapping.string_to_numeric:
                 return cde_mapping.string_to_numeric[response_text]
             
-            # Convert CDEMapping to dict for LLM prompt
-            mapping_dict = {
-                "numeric_to_string": cde_mapping.numeric_to_string,
-                "string_to_numeric": cde_mapping.string_to_numeric,
-                "valid_values": list(cde_mapping.valid_values)
-            }
-
-            # Use LLM for semantic matching only if we have a response text or non-numeric value
-            if response_text or not str_value.replace('.', '').isdigit():
-                prompt = self.prompt_template.format(
-                    response_value=str_value,
-                    response_text=response_text or "No description available",
-                    cde_mapping=json.dumps(mapping_dict, indent=2)
-                )
-                
-                messages = [
-                    self.system_message,
-                    HumanMessage(content=prompt)
-                ]
-                
-                result = await self.llm.ainvoke(messages)
-                result_content = result.content.strip()
-                
-                try:
-                    # Try to find JSON in the response
-                    json_match = re.search(r'\{[^}]+\}', result_content)
-                    if json_match:
-                        json_str = json_match.group()
-                        json_str = json_str.replace("'", '"')
-                        json_str = re.sub(r'(\w+):', r'"\1":', json_str)
-                        
-                        json_data = json.loads(json_str)
-                        mapped_value = json_data.get('mapped_value', '-9')
-                        
-                        if cde_mapping.is_valid_value(mapped_value):
-                            return mapped_value
-                except json.JSONDecodeError:
-                    logger.warning(f"Failed to parse LLM response: {result_content}")
-                
+            # Use LLM for semantic matching
+            prompt = self.prompt_template.format(
+                response_value=str_value,
+                response_text=response_text or "No description available",
+                cde_mapping=json.dumps({
+                    "numeric_to_string": cde_mapping.numeric_to_string,
+                    "string_to_numeric": cde_mapping.string_to_numeric,
+                    "valid_values": list(cde_mapping.valid_values)
+                }, indent=2)
+            )
+            
+            messages = [
+                self.system_message,
+                HumanMessage(content=prompt)
+            ]
+            
+            result = await self.llm.ainvoke(messages)
+            result_content = result.content.strip()
+            
+            try:
+                # Try to find JSON in the response
+                json_match = re.search(r'\{[^}]+\}', result_content)
+                if json_match:
+                    json_str = json_match.group()
+                    json_str = json_str.replace("'", '"')
+                    json_str = re.sub(r'(\w+):', r'"\1":', json_str)
+                    
+                    json_data = json.loads(json_str)
+                    mapped_value = json_data.get('mapped_value', '-9')
+                    
+                    if mapped_value in cde_mapping.valid_values:
+                        return mapped_value
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse LLM response: {result_content}")
+            
             return "-9"
                 
         except Exception as e:

@@ -1,17 +1,18 @@
 import pytest
 import pandas as pd
 import asyncio
-from rs2nda import ResponseMapper
+from rs2nda import ResponseMapper, CDEMapping
 
 @pytest.fixture
 def cde_definitions():
-    """Create a sample CDE definitions DataFrame."""
-    data = {
+    return pd.DataFrame({
         'ElementName': ['test_element'],
-        'Notes': ['0 = Never; 1 = Sometimes; 2 = Often; 3 = Very Often; -9 = Missing'],
-        'ElementDescription': ['Test description']
-    }
-    return pd.DataFrame(data)
+        'DataType': ['String'],
+        'ElementDescription': ['Test description'],
+        'Notes': ['1=Yes;0=No'],
+        'ValueRange': ['0::1;-9'],
+        'Aliases': ['test_alias']
+    })
 
 @pytest.fixture
 def response_mapper(cde_definitions):
@@ -19,18 +20,22 @@ def response_mapper(cde_definitions):
     return ResponseMapper(cde_definitions)
 
 @pytest.mark.asyncio
-async def test_exact_value_match(response_mapper):
+async def test_exact_value_match(cde_definitions):
     """Test when values match exactly."""
+    mapper = ResponseMapper(cde_definitions)
     response = {
         'response_value': 1,
         'response_options': [
-            {'name': {'en': 'Never'}, 'value': 0},
-            {'name': {'en': 'Sometimes'}, 'value': 1},
-            {'name': {'en': 'Often'}, 'value': 2}
+            {'name': {'en': 'Yes'}, 'value': 1},
+            {'name': {'en': 'No'}, 'value': 0}
         ]
     }
-    cde_mapping = {'Never': '0', 'Sometimes': '1', 'Often': '2'}
-    result = await response_mapper._find_best_match(
+    cde_mapping = CDEMapping(
+        numeric_to_string={'1': 'Yes', '0': 'No'},
+        string_to_numeric={'Yes': '1', 'No': '0'},
+        valid_values={'0', '1', '-9'}
+    )
+    result = await mapper._find_best_match(
         response['response_value'], 
         cde_mapping,
         response['response_options']
@@ -48,7 +53,11 @@ async def test_semantic_match(response_mapper):
             {'name': {'en': 'Regularly'}, 'value': 2}
         ]
     }
-    cde_mapping = {'Never': '0', 'Sometimes': '1', 'Frequently': '2'}
+    cde_mapping = CDEMapping(
+        numeric_to_string={'0': 'Never', '1': 'Sometimes', '2': 'Frequently'},
+        string_to_numeric={'Never': '0', 'Sometimes': '1', 'Frequently': '2'},
+        valid_values={'0', '1', '2', '-9'}
+    )
     result = await response_mapper._find_best_match(
         response['response_value'], 
         cde_mapping,
@@ -84,7 +93,11 @@ async def test_complex_semantic_match(response_mapper):
                 'response_value': 1,
                 'response_options': [{'name': {'en': 'Less than a day or two'}, 'value': 1}]
             },
-            'cde_mapping': {'Rare, happens once or twice': '1'},
+            'cde_mapping': CDEMapping(
+                numeric_to_string={'1': 'Rare, happens once or twice'},
+                string_to_numeric={'Rare, happens once or twice': '1'},
+                valid_values={'1', '-9'}
+            ),
             'expected': '1'
         },
         # Test case 2: Similar frequency descriptions
@@ -93,7 +106,11 @@ async def test_complex_semantic_match(response_mapper):
                 'response_value': 2,
                 'response_options': [{'name': {'en': 'Multiple times a week'}, 'value': 2}]
             },
-            'cde_mapping': {'Several times per week': '2'},
+            'cde_mapping': CDEMapping(
+                numeric_to_string={'2': 'Several times per week'},
+                string_to_numeric={'Several times per week': '2'},
+                valid_values={'2', '-9'}
+            ),
             'expected': '2'
         },
         # Test case 3: Similar intensity descriptions
@@ -102,7 +119,11 @@ async def test_complex_semantic_match(response_mapper):
                 'response_value': 3,
                 'response_options': [{'name': {'en': 'Very intensely'}, 'value': 3}]
             },
-            'cde_mapping': {'Severe intensity': '3'},
+            'cde_mapping': CDEMapping(
+                numeric_to_string={'3': 'Severe intensity'},
+                string_to_numeric={'Severe intensity': '3'},
+                valid_values={'3', '-9'}
+            ),
             'expected': '3'
         }
     ]
