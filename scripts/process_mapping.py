@@ -83,38 +83,6 @@ class ResponseProcessor:
         """Check if this activity should be combined with another one."""
         return "dsm_5_parent_guardian_rated_level_1_crosscutting_s" in activity_name
     
-    def _validate_subject_info(self, df: pd.DataFrame) -> None:
-        """Validate extracted subject information."""
-        if 'interview_age' in df.columns:
-            age = df['interview_age'].iloc[0]
-            try:
-                age_val = float(age)
-                if age_val < 0 or age_val > 150:  # reasonable age range
-                    self.logger.warning(f"Suspicious interview_age value: {age}")
-                    df['interview_age'] = '-9'
-            except ValueError:
-                self.logger.warning(f"Invalid interview_age value: {age}")
-                df['interview_age'] = '-9'
-                
-        if 'sex' in df.columns:
-            sex = df['sex'].iloc[0]
-            valid_sex_values = {'M', 'F', 'NR'}
-            if sex not in valid_sex_values:
-                # Check if it's a schema.org value
-                sex_mapping = {
-                    "http://schema.org/Female": "F",
-                    "http://schema.org/Male": "M",
-                    "Female": "F",
-                    "Male": "M"
-                }
-                mapped_sex = sex_mapping.get(sex)
-                if mapped_sex:
-                    df['sex'] = mapped_sex
-                    self.logger.info(f"Mapped sex value from {sex} to {mapped_sex}")
-                else:
-                    self.logger.warning(f"Invalid sex value: {sex}")
-                    df['sex'] = 'NR'
-
     async def process_demo_schema(self, response_file: Path) -> None:
         """Process demo_schema and store subject information."""
         self.logger.info(f"Processing demo schema from {response_file}")
@@ -177,7 +145,7 @@ class ResponseProcessor:
             raise
 
     async def process_single_response(self, response_file: Path) -> None:
-        """Process a single response file."""
+        """Process a single response file and maintain CDE template column order."""
         activity_name = self.get_activity_name(response_file)
         if not activity_name:
             return
@@ -190,6 +158,11 @@ class ResponseProcessor:
         output_file = self.output_dir / f"{cde_name}_output.csv"
 
         try:
+            # Log the start of processing
+            self.logger.info(f"Processing response file: {response_file}")
+            self.logger.info(f"Activity name: {activity_name}")
+            self.logger.info(f"CDE name: {cde_name}")
+
             # Process the response
             cde_def_path = self.cde_dir / f"{cde_name}_definitions.csv"
             cde_template_path = self.cde_dir / f"{cde_name}_template.csv"
@@ -200,20 +173,28 @@ class ResponseProcessor:
                 str(cde_template_path)
             )
 
-            # Add subject information and handle combined activities
+            # Log initial results
+            self.logger.info(f"Initial mapping complete. Columns: {result_df.columns.tolist()}")
+            self.logger.info(f"Number of -9 values: {(result_df == '-9').sum().sum()}")
+
+            # Add subject information
             result_df = self._add_subject_info(result_df)
             
+            # Handle combined activities if needed
             if self.should_combine_activities(activity_name):
+                self.logger.info("Combining activities...")
                 result_df = self._handle_combined_activities(result_df, output_file)
+                self.logger.info(f"After combining - Number of -9 values: {(result_df == '-9').sum().sum()}")
 
-            # Verify critical fields before saving
-            for field in ['interview_age', 'sex']:
-                if field not in result_df.columns or result_df[field].iloc[0] == '-9':
-                    self.logger.warning(f"{field} is missing or -9 in {activity_name}")
-
+            # Ensure column order matches template before saving
+            template_columns = self._get_template_columns(cde_name)
+            result_df = result_df[template_columns]
+            
+            # Save the result
             result_df.to_csv(output_file, index=False)
             self.processed_files.add(output_file)
             self.logger.info(f"Successfully processed {activity_name} to {output_file}")
+            self.logger.info(f"Final column order: {result_df.columns.tolist()}")
                 
         except Exception as e:
             self.logger.error(f"Error processing {activity_name}: {str(e)}")
@@ -226,45 +207,70 @@ class ResponseProcessor:
             for col in subject_columns:
                 if col in self.subject_info.columns:
                     df[col] = self.subject_info[col].iloc[0]
-                    if col in ['interview_age', 'sex']:
-                        self.logger.info(f"Added {col} = {self.subject_info[col].iloc[0]}")
         else:
-            self.logger.warning("No subject info available")
             # Add default -9 values for required fields
             for col in ['interview_age', 'sex']:
                 df[col] = '-9'
-                
-        print("Current subject info:")
-        print(df[['subjectkey', 'src_subject_id', 'interview_age', 'sex']].head())
-        
         return df
+
+    def _get_template_columns(self, cde_name: str) -> List[str]:
+        """Get the column order from the CDE template."""
+        template_path = self.cde_dir / f"{cde_name}_template.csv"
+        template_df = pd.read_csv(template_path, header=1)
+        return template_df.columns.tolist()
 
     def _handle_combined_activities(self, new_df: pd.DataFrame, output_file: Path) -> pd.DataFrame:
         """Handle merging of combined activities."""
         if output_file.exists() and output_file in self.processed_files:
             existing_df = pd.read_csv(output_file)
             
-            # Create merged DataFrame
-            merged_df = pd.DataFrame()
+            # Get the template columns to maintain order
+            cde_name = output_file.stem.replace('_output', '')
+            template_columns = self._get_template_columns(cde_name)
             
-            # First, copy subject information, preferring non-'-9' values
+            # Create merged DataFrame with template column order
+            merged_df = pd.DataFrame(columns=template_columns)
+            
+            # First handle subject information columns
             subject_cols = ['subjectkey', 'src_subject_id', 'interview_age', 'interview_date', 'sex']
             for col in subject_cols:
-                if col in new_df.columns and new_df[col].iloc[0] != '-9':
-                    merged_df[col] = new_df[col]
-                elif col in existing_df.columns and existing_df[col].iloc[0] != '-9':
+                if col in template_columns:  # Changed from all_columns to template_columns
+                    # Prefer non-'-9' values
+                    if col in new_df.columns and new_df[col].iloc[0] != '-9':
+                        merged_df[col] = new_df[col]
+                    elif col in existing_df.columns and existing_df[col].iloc[0] != '-9':
+                        merged_df[col] = existing_df[col]
+                    else:
+                        merged_df[col] = '-9'
+            
+            # Then handle all other columns
+            non_subject_cols = [col for col in template_columns if col not in subject_cols]  # Changed from all_columns
+            for col in non_subject_cols:
+                if col in existing_df.columns and col in new_df.columns:
+                    # If column exists in both, prefer non-'-9' values
+                    merged_df[col] = new_df[col].combine_first(existing_df[col])
+                    # If both are '-9', keep '-9'
+                    mask = (existing_df[col] == '-9') & (new_df[col] == '-9')
+                    merged_df.loc[mask, col] = '-9'
+                elif col in existing_df.columns:
                     merged_df[col] = existing_df[col]
-                else:
-                    merged_df[col] = '-9'
+                elif col in new_df.columns:
+                    merged_df[col] = new_df[col]
+                
+                # Ensure no NaN values
+                if merged_df[col].isna().any():
+                    merged_df[col] = merged_df[col].fillna('-9')
             
-            # Then merge the non-subject columns from both dataframes
-            for df in [existing_df, new_df]:
-                for col in df.columns:
-                    if col not in subject_cols and df[col].notna().any():
-                        merged_df[col] = df[col]
+            self.logger.info(f"Merged DataFrame columns: {merged_df.columns.tolist()}")
+            self.logger.info(f"Number of -9 values in merged data: {(merged_df == '-9').sum().sum()}")
             
-            return merged_df
-        return new_df
+            # Ensure final DataFrame has correct column order
+            return merged_df[template_columns]
+        
+        # If no existing file, still ensure correct column order
+        cde_name = output_file.stem.replace('_output', '')
+        template_columns = self._get_template_columns(cde_name)
+        return new_df[template_columns]
 
     async def process_responses(self) -> None:
         """Process all response files in the directory."""
@@ -291,21 +297,15 @@ class ResponseProcessor:
 
 async def debug_mapping(self, response_file: Path) -> None:
     """Debug mapping for a single response file"""
-    try:
-        # 1. Load and validate response file
-        with open(response_file) as f:
-            response_data = json.load(f)
-        print(f"Loaded response file: {response_file}")
-        
-        # 2. Extract activity name
+    try:        
+        # Extract activity name - this method already reads the file
         activity_name = self.get_activity_name(response_file)
-        print(f"Activity name: {activity_name}")
         
         if not activity_name:
             print("Could not determine activity name")
             return
             
-        # 3. Get corresponding CDE name
+        # Get corresponding CDE name
         cde_name = self.activity_to_cde_map.get(activity_name)
         print(f"CDE name: {cde_name}")
         
@@ -313,7 +313,7 @@ async def debug_mapping(self, response_file: Path) -> None:
             print("No CDE mapping found")
             return
             
-        # 4. Load CDE definitions
+        # Load CDE definitions
         cde_def_path = self.cde_dir / f"{cde_name}_definitions.csv"
         cde_template_path = self.cde_dir / f"{cde_name}_template.csv"
         
@@ -321,7 +321,7 @@ async def debug_mapping(self, response_file: Path) -> None:
         print(f"Definitions: {cde_def_path}")
         print(f"Template: {cde_template_path}")
         
-        # 5. Process response
+        # Process response
         result_df = await self.map_schema(
             str(cde_def_path),
             str(response_file),

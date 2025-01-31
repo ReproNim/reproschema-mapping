@@ -179,7 +179,7 @@ async def extract_reproschema_responses(response_jsonld: List[Dict]) -> List[Dic
                 # Fetch content from isAbout URL to get ID and question
                 response_id = ""
                 question = ""
-                response_options_path = None
+                response_options = None
                 
                 if is_about:
                     try:
@@ -187,26 +187,46 @@ async def extract_reproschema_responses(response_jsonld: List[Dict]) -> List[Dic
                         # Get ID from the isAbout content
                         response_id = item_content.get("id", "")
                         question = item_content.get("question", {}).get("en", "")
-                        response_options_path = item_content.get("responseOptions")
                         logger.debug(f"Found response ID: {response_id}")
                         logger.debug(f"Found question: {question}")
-                        logger.debug(f"Found response options path: {response_options_path}")
+                        
+                        # First try to get response options directly from item content
+                        direct_options = item_content.get("responseOptions", {})
+                        if direct_options:
+                            direct_choices = direct_options.get("choices", [])
+                            if direct_choices:
+                                logger.debug("Found response options directly in item content")
+                                response_options = direct_choices
+                            else:
+                                logger.debug("No direct choices found in responseOptions")
+                        
+                        # If no direct options found, try getting from URL
+                        if not response_options:
+                            response_options_path = item_content.get("responseOptions")
+                            if isinstance(response_options_path, str):
+                                logger.debug(f"Found response options path: {response_options_path}")
+                                constraints_url = get_constraints_url(is_about, response_options_path)
+                                if constraints_url:
+                                    try:
+                                        constraints_content = await url_cache.fetch_item_content(constraints_url)
+                                        choices = constraints_content.get("choices", [])
+                                        if choices:
+                                            logger.debug("Found response options from constraints URL")
+                                            response_options = choices
+                                    except Exception as e:
+                                        logger.error(f"Error fetching constraints content: {str(e)}")
+                                else:
+                                    logger.warning("Could not construct constraints URL")
+                            else:
+                                logger.debug("Response options path is not a string")
+                        
+                        if response_options:
+                            logger.debug(f"Final response options: {json.dumps(response_options, indent=2)}")
+                        else:
+                            logger.warning(f"No response options found for {response_id}")
+                            
                     except Exception as e:
                         logger.error(f"Error fetching item content: {str(e)}")
-                
-                # Get response options if available
-                response_options = None
-                if response_options_path:
-                    constraints_url = get_constraints_url(is_about, response_options_path)
-                    if constraints_url:
-                        try:
-                            constraints_content = await url_cache.fetch_item_content(constraints_url)
-                            choices = constraints_content.get("choices", [])
-                            if choices:
-                                response_options = choices
-                                logger.debug(f"Found response options: {json.dumps(choices, indent=2)}")
-                        except Exception as e:
-                            logger.error(f"Error fetching constraints content: {str(e)}")
                 
                 # Construct response
                 response = ReproSchemaResponse(
@@ -460,7 +480,15 @@ class QuestionMatcher:
     # Response Mapping
 class ResponseMapper:
     """Maps ReproSchema responses to CDE format"""
-    
+    SEX_MAPPING = {
+        "http://schema.org/Female": "F",
+        "http://schema.org/Male": "M",
+        "Female": "F",
+        "Male": "M",
+        "F": "F",
+        "M": "M"
+    }
+
     def __init__(self, cde_definitions: pd.DataFrame):
         self.logger = logging.getLogger(__name__)
         required_columns = ["ElementName", "DataType", "ElementDescription", "Notes", "ValueRange"]
@@ -575,50 +603,32 @@ class ResponseMapper:
 
     def _validate_and_convert_value(self, value: str, data_type: str, cde_mapping: CDEMapping) -> str:
         """Validate and convert value based on CDE DataType"""
-        logger.debug(f"Validating value: {value}, type: {data_type}")
-        
         if value == "-9":
-            logger.debug("Value is -9, returning appropriate null value")
             return "NR" if data_type == "String" else "-9"
                 
         try:
-            # Special handling for sex field
-            if "F" in cde_mapping.valid_values and "M" in cde_mapping.valid_values:
-                logger.debug("Handling sex field conversion")
-                converted = self._convert_sex_value(value)
-                logger.debug(f"Converted sex value from {value} to {converted}")
-                return converted
+            # Simplified sex field handling - check if it's a sex value that needs conversion
+            if value in self.SEX_MAPPING:
+                return self.SEX_MAPPING[value]
                     
             # Handle integer fields
             if data_type == "Integer":
                 try:
                     int_value = int(float(str(value)))
-                    # Use the is_valid_value method which now handles numeric ranges
                     if cde_mapping.is_valid_value(str(int_value)):
                         return str(int_value)
-                    self.logger.warning(f"Value {int_value} outside valid range: {cde_mapping.min_value}::{cde_mapping.max_value}")
                     return "-9"
                 except (ValueError, TypeError):
-                    self.logger.warning(f"Could not convert {value} to integer")
                     return "-9"
                         
-            # String fields
+            # String fields - try direct validation first
             if data_type == "String":
-                logger.debug(f"Processing string value: {value}")
-                # First try direct validation
-                if hasattr(cde_mapping, 'is_valid_value') and cde_mapping.is_valid_value(value):
+                if cde_mapping.is_valid_value(value):
                     return value
-                        
-                # Then try mappings
                 if value in cde_mapping.string_to_numeric:
-                    mapped = cde_mapping.string_to_numeric[value]
-                    logger.debug(f"Mapped string to numeric: {value} -> {mapped}")
-                    return mapped
-                elif value in cde_mapping.numeric_to_string:
-                    mapped = cde_mapping.numeric_to_string[value]
-                    logger.debug(f"Mapped numeric to string: {value} -> {mapped}")
-                    return mapped
-                    
+                    return cde_mapping.string_to_numeric[value]
+                if value in cde_mapping.numeric_to_string:
+                    return cde_mapping.numeric_to_string[value]
                 return "NR"
                 
             return value
@@ -626,21 +636,6 @@ class ResponseMapper:
         except Exception as e:
             logger.error(f"Error converting value {value} to {data_type}: {str(e)}")
             return "NR" if data_type == "String" else "-9"
-
-    def _convert_sex_value(self, value: str) -> str:
-        """Convert schema.org sex values to CDE format"""
-        sex_mapping = {
-            "http://schema.org/Female": "F",
-            "http://schema.org/Male": "M",
-            "Female": "F",
-            "Male": "M",
-            "F": "F",
-            "M": "M"
-        }
-        logger.debug(f"Converting sex value: {value}")
-        result = sex_mapping.get(value, "NR")
-        logger.debug(f"Converted sex value to: {result}")
-        return result
 
     async def _find_best_match(self, response_value: Any, cde_mapping: CDEMapping, 
                      response_options: Optional[List[Dict]]) -> str:
