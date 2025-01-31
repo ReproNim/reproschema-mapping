@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 import pandas as pd
 from rs2nda import ResponseMapper, QuestionMatcher, extract_reproschema_responses
+from datetime import datetime
 import logging
 
 class ResponseProcessor:
@@ -91,12 +92,20 @@ class ResponseProcessor:
         demo_template_path = self.cde_dir / "ndar_subject01_template.csv"
         
         try:
-            # Load CDE definitions to get mappings
-            cde_definitions = pd.read_csv(demo_def_path)
-            
-            # Get CDE mappings
-            response_mapper = ResponseMapper(cde_definitions)
-            interview_age_mapping = response_mapper._get_cde_mapping('interview_age')
+            # Load response data to get subject ID and interview date
+            with open(response_file) as f:
+                response_data = json.load(f)
+                
+            # Extract interview date from startedAtTime
+            interview_date = None
+            for entry in response_data:
+                if entry.get("@type") == "reproschema:ResponseActivity":
+                    started_time = entry.get("startedAtTime")
+                    if started_time:
+                        # Convert ISO format to MM/DD/YYYY
+                        dt = datetime.fromisoformat(started_time.replace('Z', '+00:00'))
+                        interview_date = dt.strftime('%m/%d/%Y')
+                        break
             
             # Map the schema
             self.subject_info = await self.map_schema(
@@ -105,41 +114,42 @@ class ResponseProcessor:
                 str(demo_template_path)
             )
             
-            self.logger.info("Initial mapped values:")
-            self.logger.info(self.subject_info[['interview_age', 'sex']].iloc[0].to_dict())
+            # Add interview date
+            if interview_date:
+                self.subject_info['interview_date'] = interview_date
+                
+            # Load CDE definitions for validation
+            cde_definitions = pd.read_csv(demo_def_path)
             
             # Validate extracted information
-            if 'interview_age' in self.subject_info.columns:
-                age = self.subject_info['interview_age'].iloc[0]
-                try:
-                    age_val = float(age)
-                    # Use min_value and max_value from mapping
-                    if (interview_age_mapping.min_value <= age_val <= interview_age_mapping.max_value):
-                        self.logger.info(f"Valid interview_age value: {age}")
-                    else:
-                        self.logger.warning(f"Interview_age {age} outside valid range ({interview_age_mapping.min_value}-{interview_age_mapping.max_value})")
-                        self.subject_info['interview_age'] = '-9'
-                except ValueError:
-                    self.logger.warning(f"Invalid interview_age format: {age}")
-                    self.subject_info['interview_age'] = '-9'
-            else:
-                self.logger.warning("Missing interview_age")
-                
-            # Log final extracted values
-            self.logger.info(f"Extracted values after validation:")
-            for field in ['interview_age', 'sex']:
+            for field in ['src_subject_id', 'interview_age', 'sex']:
                 if field in self.subject_info.columns:
                     value = self.subject_info[field].iloc[0]
-                    if value == '-9':
-                        self.logger.warning(f"{field} is -9 in demo schema")
-                    else:
-                        self.logger.info(f"Successfully extracted {field}: {value}")
-                
-            self.demo_processed = True
+                    field_def = cde_definitions[cde_definitions['ElementName'] == field].iloc[0]
+                    
+                    # Validate based on data type and constraints
+                    if field_def['DataType'] == 'String':
+                        if 'Size' in field_def and pd.notna(field_def['Size']):
+                            max_length = int(field_def['Size'])
+                            if len(str(value)) > max_length:
+                                self.logger.warning(f"{field} value exceeds max length")
+                                self.subject_info[field] = '-9'
+                                
+                    elif field_def['DataType'] == 'Integer':
+                        response_mapper = ResponseMapper(cde_definitions)
+                        mapping = response_mapper._get_cde_mapping(field)
+                        try:
+                            val = float(value)
+                            if mapping.min_value and mapping.max_value:
+                                if not (mapping.min_value <= val <= mapping.max_value):
+                                    self.logger.warning(f"{field} outside valid range")
+                                    self.subject_info[field] = '-9'
+                        except ValueError:
+                            self.subject_info[field] = '-9'
+            
             self.logger.info("Demo schema processed successfully")
-            print("Stored subject info:", 
-                self.subject_info[['interview_age', 'sex']].iloc[0].to_dict())
-                
+            self.logger.info(f"Extracted values: {self.subject_info[['src_subject_id', 'interview_age', 'sex', 'interview_date']].iloc[0].to_dict()}")
+            
         except Exception as e:
             self.logger.error(f"Error processing demo schema: {str(e)}")
             raise
@@ -392,7 +402,7 @@ async def debug_pipeline(response_dir: Path, cde_dir: Path, output_dir: Path, de
 
 def main():
     """Main function with integrated debugging options"""
-    response_dir = Path("data/rs-response1")
+    response_dir = Path("data/rs-response2")
     cde_dir = Path("data/nda_cde")
     output_dir = Path("output")
     

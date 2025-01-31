@@ -176,5 +176,70 @@ async def test_full_mapping_workflow(response_mapper):
     for value in mapped_data.values():
         assert value in ['0', '1', '2', '3', '-9']
 
+@pytest.mark.asyncio
+async def test_subject_id_validation(response_mapper):
+    test_cases = [
+        ('test123', 'test123'),  # Valid ID
+        ('x' * 21, 'NR'),       # Too long
+        ('', 'NR'),             # Empty
+        (None, 'NR')            # None value
+    ]
+    
+    cde_mapping = CDEMapping(valid_values={'test123'})
+    for input_val, expected in test_cases:
+        result = response_mapper._validate_and_convert_value(input_val, 'String', cde_mapping)
+        assert result == expected
+
+@pytest.mark.asyncio
+async def test_interview_date_conversion():
+    test_cases = [
+        ('2025-01-31T16:46:46.490Z', '01/31/2025'),
+        ('invalid_date', '-9'),
+        ('', '-9'),
+        (None, '-9')
+    ]
+    
+    mapper = ResponseMapper(pd.DataFrame({
+        'ElementName': ['interview_date'],
+        'DataType': ['Date'],
+        'ElementDescription': ['Interview date'],
+        'Notes': [''],
+        'ValueRange': ['']
+    }))
+    
+    for input_date, expected in test_cases:
+        result = mapper._validate_and_convert_value(input_date, 'Date', CDEMapping())
+        assert result == expected
+
+@pytest.mark.asyncio
+async def test_full_demo_response(cde_definitions):
+    # Update cde_definitions fixture to include src_subject_id
+    extended_df = pd.concat([
+        cde_definitions,
+        pd.DataFrame({
+            'ElementName': ['src_subject_id'],
+            'DataType': ['String'],
+            'ElementDescription': ['Subject ID'],
+            'Notes': [''],
+            'ValueRange': [''],
+            'Aliases': ['']
+        })
+    ])
+    
+    response_mapper = ResponseMapper(extended_df)
+    demo_response = {
+        'id': 'demo1',
+        'response_value': 'test123',
+        'isAbout': 'items/src_subject_id',
+        'startedAtTime': '2025-01-31T16:46:46.490Z'
+    }
+    
+    mapped_data = await response_mapper.map_responses(
+        [demo_response],
+        {'src_subject_id': ('demo1', 1.0)}
+    )
+    
+    assert mapped_data['src_subject_id'] == 'test123'
+
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 import requests
 import torch
+from datetime import datetime
 from langchain_ollama import ChatOllama
 from langchain.schema.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
@@ -419,65 +420,60 @@ class QuestionMatcher:
             return {}
 
     async def match(self, cde_definitions: pd.DataFrame, reproschema_responses: List[Dict],
-            threshold: float = config.similarity_threshold) -> Dict[str, Tuple[str, float]]:
+        threshold: float = config.similarity_threshold) -> Dict[str, Tuple[str, float]]:
         """Main matching function that coordinates all matching steps"""
         try:
-            # Extract IDs and URLs from input data
-            for response in reproschema_responses:
-                self.logger.info(f"Raw response data: {json.dumps(response, indent=2)}")
-            
-            # Extract IDs and URLs
+            # Extract IDs and URLs 
             reproschema_items = [(r.get("id", ""), r.get("isAbout", "")) for r in reproschema_responses]
             self.logger.info("=== Processing Items ===")
             
             matches = {}
             used_ids = set()
 
-            # Match based on both ID and URL
+            # Match based on URL patterns
             for repro_id, about_url in reproschema_items:
-                if not about_url:  # Skip if URL is empty
-                    self.logger.warning(f"Empty URL for ID: {repro_id}")
+                if not about_url:
                     continue
                     
                 self.logger.info(f"Checking URL: {about_url}")
                 
-                # Get item name from URL
-                if "items/interview_age" in about_url:
-                    self.logger.info(f"Found interview_age match with ID: {repro_id}")
-                    matches["interview_age"] = (repro_id, 1.0)
-                    used_ids.add(repro_id)
-                elif "items/sex" in about_url:
-                    self.logger.info(f"Found sex match with ID: {repro_id}")
-                    matches["sex"] = (repro_id, 1.0)
-                    used_ids.add(repro_id)
+                # Extended URL matching
+                url_patterns = {
+                    "items/src_subject_id": "src_subject_id",
+                    "items/interview_age": "interview_age",
+                    "items/sex": "sex"
+                }
+                
+                for pattern, cde_name in url_patterns.items():
+                    if pattern in about_url:
+                        self.logger.info(f"Found {cde_name} match with ID: {repro_id}")
+                        matches[cde_name] = (repro_id, 1.0)
+                        used_ids.add(repro_id)
 
             # Log mapping results
-            self.logger.info("=== Initial Matches ===")
-            self.logger.info(f"Matches found: {matches}")
-            self.logger.info(f"Used IDs: {used_ids}")
-                
-            # Step 2: Exact ID matching for remaining items
+            self.logger.info(f"Initial matches: {matches}")
+            
+            # Remaining matching steps (exact, alias, similarity, agent)
             reproschema_ids = [r[0] for r in reproschema_items if r[0] not in used_ids]
             cde_names = cde_definitions["ElementName"].tolist()
-            exact_matches, newly_used_ids = self._exact_id_match(reproschema_ids, cde_names)
-            matches.update(exact_matches)
-            used_ids.update(newly_used_ids)
             
-            self.logger.debug(f"After exact matching: {matches}")
+            for step in [
+                (self._exact_id_match, (reproschema_ids, cde_names)),
+                (self._alias_match, (reproschema_ids, cde_definitions, used_ids)),
+                (self._similarity_match, (cde_definitions, 
+                    [r for r in reproschema_responses if r["id"] not in used_ids], 
+                    used_ids, threshold))
+            ]:
+                func, args = step
+                new_matches = func(*args)
+                if isinstance(new_matches, tuple):
+                    matches.update(new_matches[0])
+                    used_ids.update(new_matches[1])
+                else:
+                    matches.update(new_matches)
+                    used_ids.update(m[0] for m in new_matches.values() if m)
 
-            # Step 3: Alias matching
-            alias_matches, newly_used_ids = self._alias_match(reproschema_ids, cde_definitions, used_ids)
-            matches.update(alias_matches)
-            used_ids.update(newly_used_ids)
-            
-            # Step 4: Similarity matching for remaining items
-            unmatched_responses = [r for r in reproschema_responses if r["id"] not in used_ids]
-            if unmatched_responses:
-                similarity_matches = self._similarity_match(cde_definitions, unmatched_responses, used_ids, threshold)
-                matches.update(similarity_matches)
-                used_ids.update(match[0] for match in similarity_matches.values() if match is not None)
-            
-            # Step 5: Agent matching as last resort
+            # Agent matching as last resort
             final_unmatched = [r for r in reproschema_responses if r["id"] not in used_ids]
             if final_unmatched:
                 agent_matches = await self._agent_match(final_unmatched, cde_definitions)
@@ -541,6 +537,10 @@ class ResponseMapper:
     def _parse_cde_notes(self, notes: str, value_range: Optional[str] = None) -> CDEMapping:
         """Parse CDE notes and value range into structured mapping format"""
         mapping = CDEMapping()
+
+        if pd.isna(value_range) and pd.isna(notes):
+            mapping.valid_values = {'*'}  # Special marker for "any value"
+            return mapping
 
         try:
             if pd.notna(value_range):
@@ -615,15 +615,30 @@ class ResponseMapper:
 
     def _validate_and_convert_value(self, value: str, data_type: str, cde_mapping: CDEMapping) -> str:
         """Validate and convert value based on CDE DataType"""
-        if value == "-9":
+        if value is None:
             return "NR" if data_type == "String" else "-9"
-                
+            
         try:
-            # Simplified sex field handling - check if it's a sex value that needs conversion
+            # Direct string passthrough for src_subject_id
+            if data_type == "String":
+                if '*' in cde_mapping.valid_values or (not cde_mapping.valid_values and not cde_mapping.numeric_to_string):
+                    return str(value)
+            
+            # Handle Date type
+            if data_type == "Date":
+                try:
+                    dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    return dt.strftime('%m/%d/%Y')
+                except (ValueError, TypeError):
+                    return "-9"
+                    
+            # Handle other existing types
+            if value == "-9":
+                return "NR" if data_type == "String" else "-9"
+                    
             if value in self.SEX_MAPPING:
                 return self.SEX_MAPPING[value]
-                    
-            # Handle integer fields
+                
             if data_type == "Integer":
                 try:
                     int_value = int(float(str(value)))
@@ -632,8 +647,7 @@ class ResponseMapper:
                     return "-9"
                 except (ValueError, TypeError):
                     return "-9"
-                        
-            # String fields - try direct validation first
+                    
             if data_type == "String":
                 if cde_mapping.is_valid_value(value):
                     return value
@@ -658,6 +672,10 @@ class ResponseMapper:
         try:
             # Convert response_value to string for comparison
             str_value = str(response_value)
+            
+            # For unconstrained string values (empty valid_values), return as-is
+            if not cde_mapping.valid_values or '*' in cde_mapping.valid_values:
+                return str_value
             
             # Try exact value match first
             if str_value in cde_mapping.valid_values:
@@ -714,6 +732,9 @@ class ResponseMapper:
     async def map_responses(self, reproschema_responses: List[Dict], 
                        matched_mapping: Dict[str, Tuple[str, float]]) -> Dict[str, str]:
         """Map ReproSchema responses to CDE values"""
+        self.logger.info(f"Processing response: {reproschema_responses}")
+        self.logger.info(f"Matched mapping: {matched_mapping}")
+
         mapped_data = {}
         repro_lookup = {r["id"]: r for r in reproschema_responses}
         
@@ -731,6 +752,9 @@ class ResponseMapper:
                     
                 repro_id, confidence = match_info
                 response = repro_lookup.get(repro_id)
+
+                self.logger.info(f"Processing CDE element: {cde_element}")
+                self.logger.info(f"Response data: {response}")
                 
                 if response is None:
                     self.logger.warning(f"No response found for ID: {repro_id}")

@@ -92,3 +92,4 @@ def test_sex_value_conversion():
     assert response_mapper._validate_and_convert_value('Male', 'String', cde_mapping) == 'M'
     assert response_mapper._validate_and_convert_value('F', 'String', cde_mapping) == 'F'
     assert response_mapper._validate_and_convert_value('invalid', 'String', cde_mapping) == 'NR'
+
