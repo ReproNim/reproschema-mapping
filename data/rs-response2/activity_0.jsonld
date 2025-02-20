@@ -1,0 +1,89 @@
+[
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:51d9bd26-c8c9-4bc5-b237-bdc6ccbe105c",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/NDA/items/src_subject_id",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/activities/demo/demo_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:46:46.490Z",
+        "endedAtTime": "2025-01-31T16:47:01.209Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:60551d94-209f-4ec1-b4f4-30a88dea8507"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:60551d94-209f-4ec1-b4f4-30a88dea8507",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/NDA/items/src_subject_id",
+        "value": "78sdomcegd"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:ca2bbf1b-00b3-4539-9855-e61092779294",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/NDA/items/interview_age",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/activities/demo/demo_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:01.209Z",
+        "endedAtTime": "2025-01-31T16:47:06.342Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:363147c2-4204-493f-badb-d3ad01f5a14b"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:363147c2-4204-493f-badb-d3ad01f5a14b",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/NDA/items/interview_age",
+        "value": "400"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:daa2d86b-4c33-4e0b-956f-103d517dbdf2",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/NDA/items/sex",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/activities/demo/demo_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:06.342Z",
+        "endedAtTime": "2025-01-31T16:47:08.650Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:b51a4326-f134-44ec-888c-084131f496af"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:b51a4326-f134-44ec-888c-084131f496af",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/NDA/items/sex",
+        "value": "http://schema.org/Female"
+    }
+]

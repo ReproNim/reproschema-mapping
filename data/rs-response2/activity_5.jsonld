@@ -1,0 +1,31 @@
+[
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:40a586a5-12d3-4102-b047-68ce334de9ad",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/ThankYou/items/saveData",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/ThankYou/ThankYou_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:49:09.704Z",
+        "endedAtTime": "2025-01-31T16:49:14.995Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:18cdfbcb-b3f9-4eaa-a779-ea6dcce8a093"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:18cdfbcb-b3f9-4eaa-a779-ea6dcce8a093",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/ThankYou/items/saveData",
+        "value": "completed"
+    }
+]

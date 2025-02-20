@@ -1,0 +1,669 @@
+[
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:b615830a-59e2-467b-ac8d-2ee50e35d570",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_1",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:08.650Z",
+        "endedAtTime": "2025-01-31T16:47:13.899Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:18e9e3c5-f2e6-4908-b9d4-a74b6bb098b5"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:18e9e3c5-f2e6-4908-b9d4-a74b6bb098b5",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_1",
+        "value": 1
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:0b7ed911-8293-4f9c-8b28-7ff3a700d57a",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_2",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:13.899Z",
+        "endedAtTime": "2025-01-31T16:47:15.942Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:4cd7fe8b-2f84-4526-921a-6f350fb87f65"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:4cd7fe8b-2f84-4526-921a-6f350fb87f65",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_2",
+        "value": 2
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:7226e33a-b3d6-4c88-8dde-99e5ebdb6782",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_3",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:15.942Z",
+        "endedAtTime": "2025-01-31T16:47:17.959Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:e4ea5051-3d3d-4a31-88e5-60ec40f41f1e"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:e4ea5051-3d3d-4a31-88e5-60ec40f41f1e",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_3",
+        "value": 1
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:11cf4f8f-3802-4d66-9a25-20026b277a16",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_4",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:17.959Z",
+        "endedAtTime": "2025-01-31T16:47:20.031Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:66dee79d-3d15-490d-b09d-245040915d43"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:66dee79d-3d15-490d-b09d-245040915d43",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_4",
+        "value": 3
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:77780ed4-48b1-4b4d-bd5d-c339638e60fe",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_5",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:20.031Z",
+        "endedAtTime": "2025-01-31T16:47:22.250Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:32676c25-2963-43de-99ca-da3031825756"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:32676c25-2963-43de-99ca-da3031825756",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_5",
+        "value": 4
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:553494bc-5885-46cb-8621-bed66b0d4aec",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_6",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:22.250Z",
+        "endedAtTime": "2025-01-31T16:47:24.139Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:99485027-086f-4b50-9e14-fbe6fea328e3"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:99485027-086f-4b50-9e14-fbe6fea328e3",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_6",
+        "value": 2
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:a1c4bd11-8957-4f4a-bf5e-4da0e3a54160",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_7",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:24.139Z",
+        "endedAtTime": "2025-01-31T16:47:25.680Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:34a040ac-cdb4-43f0-9c8a-7fa0ead09a93"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:34a040ac-cdb4-43f0-9c8a-7fa0ead09a93",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_7",
+        "value": 0
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:6967face-10e2-44c6-b72d-850253972324",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_8",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:25.680Z",
+        "endedAtTime": "2025-01-31T16:47:27.650Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:3d1a5221-74eb-402d-8336-a5734c1562e5"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:3d1a5221-74eb-402d-8336-a5734c1562e5",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_8",
+        "value": 1
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:37121301-3324-4e6e-8373-3dcc7f3b839c",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_9",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:27.650Z",
+        "endedAtTime": "2025-01-31T16:47:29.634Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:95ba8e91-53e5-4e01-99f2-c0de7f248c39"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:95ba8e91-53e5-4e01-99f2-c0de7f248c39",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_9",
+        "value": 3
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:79b3654c-90a4-4577-8350-5fe3f33d89c1",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_10",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:29.634Z",
+        "endedAtTime": "2025-01-31T16:47:31.251Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:268ef3d6-ba53-47ad-9954-a2adee5bc220"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:268ef3d6-ba53-47ad-9954-a2adee5bc220",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_10",
+        "value": 1
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:ddfa8780-cf59-4247-aff7-c5250783b3bb",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_11",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:31.251Z",
+        "endedAtTime": "2025-01-31T16:47:33.002Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:5cf1f42a-063d-4018-ae0b-27e2974fdcb0"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:5cf1f42a-063d-4018-ae0b-27e2974fdcb0",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_11",
+        "value": 0
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:ff8f330b-4004-42e8-a3aa-dced3ad031dc",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_12",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:33.002Z",
+        "endedAtTime": "2025-01-31T16:47:34.861Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:ba0ffd5c-b43f-4278-9dad-c7f4d6a8bd85"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:ba0ffd5c-b43f-4278-9dad-c7f4d6a8bd85",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_12",
+        "value": 3
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:cd9c14b9-0a0c-4068-8403-6d3cbaaaa69c",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_13",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:34.861Z",
+        "endedAtTime": "2025-01-31T16:47:36.891Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:07a10fd0-38e8-49ce-9fdf-c05ef4fa280d"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:07a10fd0-38e8-49ce-9fdf-c05ef4fa280d",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_13",
+        "value": 1
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:81d8823b-0525-45d6-8497-7909c568bb98",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_14",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:36.891Z",
+        "endedAtTime": "2025-01-31T16:47:38.898Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:b20d9672-4c15-4fad-bd0f-15c5927922be"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:b20d9672-4c15-4fad-bd0f-15c5927922be",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_14",
+        "value": 3
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:a5bbb25e-7c47-4145-943e-19b286f75fc9",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_15",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:38.898Z",
+        "endedAtTime": "2025-01-31T16:47:40.927Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:4cd07620-59da-431c-8c5d-2d27b6d2f33f"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:4cd07620-59da-431c-8c5d-2d27b6d2f33f",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_15",
+        "value": 1
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:c3426408-a8c1-4c9a-a27c-22abfc358bca",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_16",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:40.927Z",
+        "endedAtTime": "2025-01-31T16:47:42.571Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:9c143fef-eec9-4e8e-ace4-41913ad7b8cb"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:9c143fef-eec9-4e8e-ace4-41913ad7b8cb",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_16",
+        "value": 0
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:5a2f5684-e6c6-4e88-9939-e2b7be5f3c6f",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_17",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:42.571Z",
+        "endedAtTime": "2025-01-31T16:47:44.452Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:59e738fc-e8b1-4940-bb03-544e23e8ca92"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:59e738fc-e8b1-4940-bb03-544e23e8ca92",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_17",
+        "value": 4
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:63881c7b-97ac-44ae-9278-126c9bbeeb34",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_18",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:44.452Z",
+        "endedAtTime": "2025-01-31T16:47:46.146Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:55a7d962-18b8-487b-b225-3301362cc289"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:55a7d962-18b8-487b-b225-3301362cc289",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_18",
+        "value": 0
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:605e7045-d64b-4ae4-9837-0e9145773aef",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_19",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:46.146Z",
+        "endedAtTime": "2025-01-31T16:47:48.110Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:5bc8239a-01af-4827-a524-b9c5187729f8"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:5bc8239a-01af-4827-a524-b9c5187729f8",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_19",
+        "value": 2
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:44fbf5ac-c06b-4127-b8e1-b652ebd3cae1",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_20",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:48.110Z",
+        "endedAtTime": "2025-01-31T16:47:50.247Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:4fb1af8f-efae-4ea0-95c0-9b7e4e97173c"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:4fb1af8f-efae-4ea0-95c0-9b7e4e97173c",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_20",
+        "value": 1
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:e3c641f0-c0ee-48a0-b05f-29406a616ea0",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_21",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:50.247Z",
+        "endedAtTime": "2025-01-31T16:47:52.383Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:a684f04c-5f3f-44dc-a2da-db2409195983"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:a684f04c-5f3f-44dc-a2da-db2409195983",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_21",
+        "value": 0
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:d5799563-3280-4ede-90e6-12a4e859ab63",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_22",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:52.383Z",
+        "endedAtTime": "2025-01-31T16:47:54.544Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:e15a6e63-5c7b-47b7-b1f9-d3e4d58b40e4"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:e15a6e63-5c7b-47b7-b1f9-d3e4d58b40e4",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_22",
+        "value": 3
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:ResponseActivity",
+        "@id": "uuid:43cb3cfd-8139-4225-bebe-a852e313e79e",
+        "used": [
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_23",
+            "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/DSM5_crosscutting_adult_schema",
+            "https://raw.githubusercontent.com/repronim/nimh-minimal/main/nimh_minimal/nimh_minimal_schema"
+        ],
+        "inLanguage": "en",
+        "startedAtTime": "2025-01-31T16:47:54.544Z",
+        "endedAtTime": "2025-01-31T16:47:56.437Z",
+        "wasAssociatedWith": {
+            "version": "1.0.0",
+            "url": "https://www.repronim.org/nimh-minimal/",
+            "@id": "https://github.com/ReproNim/reproschema-ui"
+        },
+        "generated": "uuid:2ce17ccc-d2fe-49a8-beb8-07c142391ed7"
+    },
+    {
+        "@context": "https://raw.githubusercontent.com/ReproNim/reproschema/1.0.0/contexts/reproschema",
+        "@type": "reproschema:Response",
+        "@id": "uuid:2ce17ccc-d2fe-49a8-beb8-07c142391ed7",
+        "wasAttributedTo": {
+            "@id": "16d0a36d-d917-44f4-8d80-a7d49cfd0f87"
+        },
+        "isAbout": "https://raw.githubusercontent.com/ReproNim/reproschema-library/25162084b702505cd7b6729ab569bd17c144213b/activities/DSM-5_A/items/dsm5crossad_23",
+        "value": 0
+    }
+]
