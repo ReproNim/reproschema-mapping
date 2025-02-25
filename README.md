@@ -1,11 +1,11 @@
 # ReproSchema to NDA Converter
 
-Convert ReproSchema responses to NDA (National Data Archive) Common Data Elements (CDE) format. This tool helps standardize mental health assessment data collection by mapping ReproSchema responses to NDA's required formats.
+Convert [NIMH-Minimal](https://www.repronim.org/nimh-minimal/#/) ReproSchema responses to [NDA (National Data Archive) Common Data Elements (CDE) format](https://nda.nih.gov/nda/nimh-common-data-elements). This tool helps standardize mental health assessment data collection by mapping ReproSchema responses to NDA's required formats.
 
 ## Features
 
 - Converts ReproSchema response files to NDA CDE format
-- Supports multiple mental health assessments:
+- Supports multiple mental health assessments (see [here](https://github.com/ReproNim/nimh-minimal)):
   - DSM-5 Cross-Cutting (Adult, Youth, Parent/Guardian)
   - GAD-7
   - PHQ-9
